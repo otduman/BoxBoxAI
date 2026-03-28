@@ -35,3 +35,10 @@ session_summary.prompt.json
 # Temporary files
 tmp_*.py
 *.tmp
+
+# Web Frontend (Lovable / React / Vite)
+web/node_modules/
+web/dist/
+web/.env*
+web/.DS_Store
+web/coverage/

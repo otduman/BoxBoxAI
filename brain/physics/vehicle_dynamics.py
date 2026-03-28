@@ -10,11 +10,8 @@ import numpy as np
 import pandas as pd
 
 from brain.config import (
-    OVERSTEER_BETA_THRESHOLD_RAD,
-    LOCKUP_LAMBDA_THRESHOLD,
-    WHEELSPIN_LAMBDA_THRESHOLD,
-    SLIP_ANGLE_WARNING_RAD,
     G_ACCEL,
+    get_active_profile,
 )
 
 logger = logging.getLogger(__name__)
@@ -150,7 +147,7 @@ def _detect_events_from_signal(
 
     for s, e in zip(starts, ends):
         duration = t[min(e, len(t) - 1)] - t[s]
-        if duration < 0.02:
+        if duration < get_active_profile().min_event_duration_s:
             continue
 
         peak = float(np.abs(signal[s:e]).max())
@@ -181,9 +178,10 @@ def _detect_events_from_signal(
 def _detect_oversteer(df: pd.DataFrame) -> list[DynamicsEvent]:
     if "beta_rad" not in df.columns:
         return []
+    profile = get_active_profile()
     beta = np.abs(df["beta_rad"].fillna(0).values)
     return _detect_events_from_signal(
-        df, beta, OVERSTEER_BETA_THRESHOLD_RAD, "oversteer", "above"
+        df, beta, profile.oversteer_beta_threshold_rad, "oversteer", "above"
     )
 
 
@@ -192,9 +190,10 @@ def _detect_understeer(df: pd.DataFrame) -> list[DynamicsEvent]:
     available = [c for c in cols if c in df.columns]
     if not available:
         return []
+    profile = get_active_profile()
     front_alpha = np.abs(df[available].fillna(0).values).max(axis=1)
     return _detect_events_from_signal(
-        df, front_alpha, SLIP_ANGLE_WARNING_RAD, "understeer", "above"
+        df, front_alpha, profile.slip_angle_warning_rad, "understeer", "above"
     )
 
 
@@ -203,9 +202,10 @@ def _detect_lockup(df: pd.DataFrame) -> list[DynamicsEvent]:
     available = [c for c in cols if c in df.columns]
     if not available:
         return []
+    profile = get_active_profile()
     min_lambda = df[available].fillna(0).values.min(axis=1)
     return _detect_events_from_signal(
-        df, min_lambda, LOCKUP_LAMBDA_THRESHOLD, "lockup", "below"
+        df, min_lambda, profile.lockup_lambda_threshold, "lockup", "below"
     )
 
 
@@ -214,7 +214,8 @@ def _detect_wheelspin(df: pd.DataFrame) -> list[DynamicsEvent]:
     available = [c for c in cols if c in df.columns]
     if not available:
         return []
+    profile = get_active_profile()
     max_rear = df[available].fillna(0).values.max(axis=1)
     return _detect_events_from_signal(
-        df, max_rear, WHEELSPIN_LAMBDA_THRESHOLD, "wheelspin", "above"
+        df, max_rear, profile.wheelspin_lambda_threshold, "wheelspin", "above"
     )

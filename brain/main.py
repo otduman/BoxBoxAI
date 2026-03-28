@@ -23,6 +23,7 @@ from brain.physics.consistency import analyze_consistency, compare_laps
 from brain.physics.coaching_rules import compute_all_verdicts, verdicts_to_dict
 from brain.output.json_builder import build_session_summary, save_session_summary
 from brain.output.llm_prompt import build_coaching_prompt
+from brain.output.track_viz import export_viz_json
 
 import numpy as np
 
@@ -35,6 +36,7 @@ def run_pipeline(
     output_path: str = "session_summary.json",
     primary_only: bool = False,
     driver_level: str = "intermediate",
+    driver_profile: str = "autonomous",
 ) -> dict:
     """Run the full Brain pipeline: MCAP -> analysis -> JSON.
 
@@ -44,11 +46,20 @@ def run_pipeline(
         output_path: Where to save session_summary.json.
         primary_only: If True, skip supplementary topics (faster).
         driver_level: For LLM prompt generation.
+        driver_profile: "autonomous" or "human" — controls detection thresholds.
 
     Returns:
         The session summary dict.
     """
     t_start = time.perf_counter()
+
+    # --- Step 0: Set driver profile ---
+    from brain.config import set_driver_profile, get_active_profile
+    set_driver_profile(driver_profile)
+    profile = get_active_profile()
+    logger.info(f"Driver profile: {profile.name} (lockup={profile.lockup_lambda_threshold}, "
+                f"wheelspin={profile.wheelspin_lambda_threshold}, min_event={profile.min_event_duration_s}s, "
+                f"coast_flag={profile.coast_time_flag_s}s)")
 
     # --- Step 1: Extract telemetry ---
     logger.info("Step 1/6: Extracting telemetry from MCAP...")
@@ -202,6 +213,12 @@ def run_pipeline(
         json.dump(prompt, f, indent=2)
     logger.info(f"LLM prompt saved to {prompt_path}")
 
+    # --- Step 8: Export track visualization data ---
+    logger.info("Step 8: Exporting track visualization data...")
+    viz_path = Path(output_path).with_name("viz_data.json")
+    car_xy = master[["x_m", "y_m"]].values if "x_m" in master.columns else None
+    export_viz_json(track, segments, coaching_verdicts, str(viz_path), car_xy=car_xy)
+
     t_total = time.perf_counter() - t_start
     logger.info(f"Pipeline complete in {t_total:.1f}s")
 
@@ -238,6 +255,12 @@ def main():
         help="Driver experience level for coaching feedback",
     )
     parser.add_argument(
+        "--profile", "-p",
+        default="autonomous",
+        choices=["autonomous", "human"],
+        help="Driver profile: 'autonomous' for tight thresholds, 'human' for relaxed (default: autonomous)",
+    )
+    parser.add_argument(
         "--verbose", "-v",
         action="store_true",
         help="Enable verbose logging",
@@ -257,6 +280,7 @@ def main():
         output_path=args.output,
         primary_only=args.primary_only,
         driver_level=args.driver_level,
+        driver_profile=args.profile,
     )
 
 

@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Track Visualization — Pocket Race Engineer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0a0a0f;
+    color: #e0e0e0;
+    overflow: hidden;
+    height: 100vh;
+  }
+  #header {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 48px; background: #12121a; border-bottom: 1px solid #2a2a3a;
+    display: flex; align-items: center; padding: 0 20px; z-index: 100;
+  }
+  #header h1 { font-size: 16px; font-weight: 600; color: #f0f0f0; }
+  #header .subtitle { font-size: 12px; color: #888; margin-left: 12px; }
+  #header .load-btn {
+    margin-left: auto; padding: 6px 14px; border-radius: 6px;
+    background: #2563eb; color: white; border: none; cursor: pointer;
+    font-size: 13px; font-weight: 500;
+  }
+  #header .load-btn:hover { background: #1d4ed8; }
+
+  #canvas-wrap {
+    position: fixed; top: 48px; left: 0; right: 340px; bottom: 0;
+    background: #0a0a0f;
+  }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  #sidebar {
+    position: fixed; top: 48px; right: 0; bottom: 0; width: 340px;
+    background: #12121a; border-left: 1px solid #2a2a3a;
+    overflow-y: auto; padding: 16px;
+  }
+  #sidebar h2 { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #ccc; }
+
+  .verdict-card {
+    background: #1a1a28; border: 1px solid #2a2a3a; border-radius: 8px;
+    padding: 12px; margin-bottom: 10px; cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .verdict-card:hover { border-color: #4a4a6a; background: #1e1e30; }
+  .verdict-card.selected { border-color: #2563eb; background: #1a1a38; }
+
+  .verdict-card .tag {
+    display: inline-block; font-size: 10px; font-weight: 600;
+    padding: 2px 6px; border-radius: 3px; margin-right: 4px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .tag.critical { background: #dc2626; color: white; }
+  .tag.high { background: #ea580c; color: white; }
+  .tag.medium { background: #ca8a04; color: white; }
+  .tag.low { background: #4a5568; color: white; }
+
+  .tag.cat { background: #1e3a5f; color: #60a5fa; }
+
+  .verdict-card .finding { font-size: 13px; margin: 8px 0 4px; line-height: 1.4; }
+  .verdict-card .reasoning {
+    font-size: 11px; color: #999; margin: 4px 0; line-height: 1.4;
+    display: none;
+  }
+  .verdict-card.selected .reasoning { display: block; }
+  .verdict-card .action {
+    font-size: 12px; color: #60a5fa; margin-top: 6px; line-height: 1.4;
+    display: none;
+  }
+  .verdict-card.selected .action { display: block; }
+  .verdict-card .time-impact {
+    font-size: 11px; color: #f87171; margin-top: 4px;
+  }
+
+  .legend {
+    margin-top: 16px; padding-top: 12px; border-top: 1px solid #2a2a3a;
+  }
+  .legend-item { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 12px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  #tooltip {
+    position: fixed; display: none; pointer-events: none;
+    background: #1a1a28; border: 1px solid #4a4a6a; border-radius: 6px;
+    padding: 8px 12px; font-size: 12px; max-width: 280px; z-index: 200;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  }
+  #tooltip .tt-seg { font-weight: 600; color: #60a5fa; }
+  #tooltip .tt-finding { margin-top: 4px; color: #ccc; line-height: 1.3; }
+
+  #empty-state {
+    position: fixed; top: 48px; left: 0; right: 0; bottom: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: #666; font-size: 14px;
+  }
+  #empty-state p { margin: 8px 0; }
+  #empty-state code {
+    background: #1a1a28; padding: 8px 16px; border-radius: 6px; font-size: 13px;
+    color: #60a5fa; margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+<div id="header">
+  <h1>Pocket Race Engineer</h1>
+  <span class="subtitle">Track Visualization</span>
+  <input type="file" id="file-input" accept=".json" style="display:none">
+  <button class="load-btn" onclick="document.getElementById('file-input').click()">Load viz_data.json</button>
+</div>
+
+<div id="empty-state">
+  <p>No track data loaded.</p>
+  <p>Click "Load viz_data.json" or run the pipeline:</p>
+  <code>python -m brain.main data.mcap --boundaries track_bnd.json</code>
+</div>
+
+<div id="canvas-wrap" style="display:none">
+  <canvas id="track-canvas"></canvas>
+</div>
+
+<div id="sidebar" style="display:none">
+  <h2>Coaching Verdicts</h2>
+  <div id="verdict-list"></div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#dc2626"></div> Critical</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ea580c"></div> High</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ca8a04"></div> Medium</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#4a5568"></div> Low</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#3b82f6;width:10px;height:2px;border-radius:1px"></div> Car trajectory</div>
+  </div>
+</div>
+
+<div id="tooltip">
+  <div class="tt-seg"></div>
+  <div class="tt-finding"></div>
+</div>
+
+<script>
+const SEV_COLORS = {
+  critical: '#dc2626',
+  high: '#ea580c',
+  medium: '#ca8a04',
+  low: '#4a5568',
+};
+
+let vizData = null;
+let transform = { scale: 1, offsetX: 0, offsetY: 0 };
+let selectedIdx = -1;
+let hoveredIdx = -1;
+let isDragging = false;
+let dragStart = { x: 0, y: 0 };
+let dragOffset = { x: 0, y: 0 };
+
+const canvas = document.getElementById('track-canvas');
+const ctx = canvas.getContext('2d');
+
+// --- File loading ---
+document.getElementById('file-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      vizData = JSON.parse(ev.target.result);
+      initVisualization();
+    } catch (err) {
+      alert('Invalid JSON: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+});
+
+// Auto-load viz_data.json if served from same directory
+fetch('viz_data.json')
+  .then(r => { if (r.ok) return r.json(); throw new Error('not found'); })
+  .then(data => { vizData = data; initVisualization(); })
+  .catch(() => {});
+
+function initVisualization() {
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('canvas-wrap').style.display = 'block';
+  document.getElementById('sidebar').style.display = 'block';
+  resizeCanvas();
+  computeTransform();
+  buildVerdictCards();
+  draw();
+}
+
+function resizeCanvas() {
+  const wrap = document.getElementById('canvas-wrap');
+  canvas.width = wrap.clientWidth * devicePixelRatio;
+  canvas.height = wrap.clientHeight * devicePixelRatio;
+  canvas.style.width = wrap.clientWidth + 'px';
+  canvas.style.height = wrap.clientHeight + 'px';
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+}
+
+function computeTransform() {
+  if (!vizData) return;
+  const cl = vizData.track.centerline;
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const [x, y] of cl) {
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+  }
+  const wrap = document.getElementById('canvas-wrap');
+  const w = wrap.clientWidth;
+  const h = wrap.clientHeight;
+  const pad = 60;
+  const rangeX = maxX - minX || 1;
+  const rangeY = maxY - minY || 1;
+  const scaleX = (w - pad * 2) / rangeX;
+  const scaleY = (h - pad * 2) / rangeY;
+  transform.scale = Math.min(scaleX, scaleY);
+  transform.offsetX = (w - rangeX * transform.scale) / 2 - minX * transform.scale;
+  transform.offsetY = (h - rangeY * transform.scale) / 2 - minY * transform.scale;
+  dragOffset.x = 0;
+  dragOffset.y = 0;
+}
+
+function toScreen(x, y) {
+  return [
+    x * transform.scale + transform.offsetX,
+    y * transform.scale + transform.offsetY,
+  ];
+}
+
+// --- Drawing ---
+function draw() {
+  if (!vizData) return;
+  const wrap = document.getElementById('canvas-wrap');
+  const w = wrap.clientWidth;
+  const h = wrap.clientHeight;
+  ctx.clearRect(0, 0, w, h);
+
+  // Draw track borders
+  drawPolyline(vizData.track.left_border, '#2a2a3a', 1);
+  drawPolyline(vizData.track.right_border, '#2a2a3a', 1);
+  drawPolyline(vizData.track.centerline, '#3a3a4a', 0.5);
+
+  // Draw track surface (filled between borders)
+  drawTrackSurface(vizData.track.left_border, vizData.track.right_border);
+
+  // Draw corner segments highlighted
+  for (const seg of vizData.segments) {
+    if (seg.type === 'corner') {
+      drawSegmentArc(seg);
+    }
+  }
+
+  // Draw car trajectory
+  if (vizData.car_trajectory) {
+    drawPolyline(vizData.car_trajectory, '#3b82f6', 1.5);
+  }
+
+  // Draw segment labels
+  for (const seg of vizData.segments) {
+    if (seg.type === 'corner') {
+      const [sx, sy] = toScreen(seg.apex[0], seg.apex[1]);
+      ctx.font = '10px -apple-system, sans-serif';
+      ctx.fillStyle = '#666';
+      ctx.textAlign = 'center';
+      ctx.fillText(seg.id, sx, sy - 14);
+    }
+  }
+
+  // Draw verdict markers
+  for (let i = 0; i < vizData.markers.length; i++) {
+    const m = vizData.markers[i];
+    const [sx, sy] = toScreen(m.x, m.y);
+    const color = SEV_COLORS[m.severity] || '#4a5568';
+    const isSelected = i === selectedIdx;
+    const isHovered = i === hoveredIdx;
+    const r = isSelected ? 10 : isHovered ? 8 : 6;
+
+    // Glow
+    if (isSelected || isHovered) {
+      ctx.beginPath();
+      ctx.arc(sx, sy, r + 4, 0, Math.PI * 2);
+      ctx.fillStyle = color + '40';
+      ctx.fill();
+    }
+
+    // Marker circle
+    ctx.beginPath();
+    ctx.arc(sx, sy, r, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = isSelected ? 2 : 1;
+    ctx.stroke();
+
+    // Number label
+    ctx.font = `bold ${isSelected ? 11 : 9}px -apple-system, sans-serif`;
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(i + 1, sx, sy);
+  }
+}
+
+function drawPolyline(pts, color, width) {
+  if (pts.length < 2) return;
+  ctx.beginPath();
+  const [sx, sy] = toScreen(pts[0][0], pts[0][1]);
+  ctx.moveTo(sx, sy);
+  for (let i = 1; i < pts.length; i++) {
+    const [px, py] = toScreen(pts[i][0], pts[i][1]);
+    ctx.lineTo(px, py);
+  }
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.stroke();
+}
+
+function drawTrackSurface(left, right) {
+  if (left.length < 2 || right.length < 2) return;
+  ctx.beginPath();
+  let [sx, sy] = toScreen(left[0][0], left[0][1]);
+  ctx.moveTo(sx, sy);
+  for (let i = 1; i < left.length; i++) {
+    [sx, sy] = toScreen(left[i][0], left[i][1]);
+    ctx.lineTo(sx, sy);
+  }
+  for (let i = right.length - 1; i >= 0; i--) {
+    [sx, sy] = toScreen(right[i][0], right[i][1]);
+    ctx.lineTo(sx, sy);
+  }
+  ctx.closePath();
+  ctx.fillStyle = '#14141f';
+  ctx.fill();
+}
+
+function drawSegmentArc(seg) {
+  const [sx, sy] = toScreen(seg.start[0], seg.start[1]);
+  const [ex, ey] = toScreen(seg.end[0], seg.end[1]);
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  ctx.lineTo(ex, ey);
+  ctx.strokeStyle = seg.direction === 'left' ? '#7c3aed44' : '#059669​44';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+}
+
+// --- Verdict cards ---
+function buildVerdictCards() {
+  const list = document.getElementById('verdict-list');
+  list.innerHTML = '';
+  if (!vizData || !vizData.markers.length) {
+    list.innerHTML = '<p style="color:#666;font-size:13px">No verdicts to display.</p>';
+    return;
+  }
+  vizData.markers.forEach((m, i) => {
+    const card = document.createElement('div');
+    card.className = 'verdict-card';
+    card.dataset.index = i;
+    card.innerHTML = `
+      <span class="tag ${m.severity}">${m.severity}</span>
+      <span class="tag cat">${m.category}</span>
+      <span style="font-size:11px;color:#888">${m.segment}</span>
+      <div class="finding">${i + 1}. ${m.finding}</div>
+      <div class="reasoning">${m.reasoning}</div>
+      <div class="action"><strong>Action:</strong> ${m.action}</div>
+      ${m.time_impact_s > 0 ? `<div class="time-impact">~${m.time_impact_s.toFixed(2)}s potential gain</div>` : ''}
+    `;
+    card.addEventListener('click', () => selectVerdict(i));
+    list.appendChild(card);
+  });
+}
+
+function selectVerdict(idx) {
+  if (selectedIdx === idx) {
+    selectedIdx = -1;
+  } else {
+    selectedIdx = idx;
+  }
+  // Update card states
+  document.querySelectorAll('.verdict-card').forEach((c, i) => {
+    c.classList.toggle('selected', i === selectedIdx);
+  });
+  // Scroll selected card into view
+  if (selectedIdx >= 0) {
+    document.querySelectorAll('.verdict-card')[selectedIdx]?.scrollIntoView({
+      behavior: 'smooth', block: 'nearest'
+    });
+  }
+  draw();
+}
+
+// --- Mouse interaction ---
+canvas.addEventListener('mousemove', (e) => {
+  if (isDragging) {
+    transform.offsetX += e.clientX - dragStart.x;
+    transform.offsetY += e.clientY - dragStart.y;
+    dragStart.x = e.clientX;
+    dragStart.y = e.clientY;
+    draw();
+    return;
+  }
+
+  if (!vizData) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  let found = -1;
+  for (let i = 0; i < vizData.markers.length; i++) {
+    const m = vizData.markers[i];
+    const [sx, sy] = toScreen(m.x, m.y);
+    const dx = mx - sx, dy = my - sy;
+    if (dx * dx + dy * dy < 144) { // 12px radius
+      found = i;
+      break;
+    }
+  }
+
+  if (found !== hoveredIdx) {
+    hoveredIdx = found;
+    canvas.style.cursor = found >= 0 ? 'pointer' : 'grab';
+    draw();
+  }
+
+  // Tooltip
+  const tt = document.getElementById('tooltip');
+  if (found >= 0) {
+    const m = vizData.markers[found];
+    tt.querySelector('.tt-seg').textContent = `${m.segment} — ${m.category}`;
+    tt.querySelector('.tt-finding').textContent = m.finding;
+    tt.style.display = 'block';
+    tt.style.left = (e.clientX + 16) + 'px';
+    tt.style.top = (e.clientY - 10) + 'px';
+  } else {
+    tt.style.display = 'none';
+  }
+});
+
+canvas.addEventListener('mousedown', (e) => {
+  if (hoveredIdx >= 0) {
+    selectVerdict(hoveredIdx);
+    return;
+  }
+  isDragging = true;
+  dragStart.x = e.clientX;
+  dragStart.y = e.clientY;
+  canvas.style.cursor = 'grabbing';
+});
+
+canvas.addEventListener('mouseup', () => {
+  isDragging = false;
+  canvas.style.cursor = hoveredIdx >= 0 ? 'pointer' : 'grab';
+});
+
+canvas.addEventListener('mouseleave', () => {
+  isDragging = false;
+  document.getElementById('tooltip').style.display = 'none';
+});
+
+// Zoom with scroll wheel
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  const oldScale = transform.scale;
+  transform.scale *= zoomFactor;
+  transform.offsetX = mx - (mx - transform.offsetX) * (transform.scale / oldScale);
+  transform.offsetY = my - (my - transform.offsetY) * (transform.scale / oldScale);
+
+  draw();
+}, { passive: false });
+
+// Resize
+window.addEventListener('resize', () => {
+  if (!vizData) return;
+  resizeCanvas();
+  computeTransform();
+  draw();
+});
+</script>
+</body>
+</html>

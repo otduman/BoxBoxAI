@@ -27,6 +27,7 @@ from brain.config import (
     MPS_TO_KMH,
     G_ACCEL,
     BRAKE_ON_THRESHOLD_PA,
+    get_active_profile,
 )
 from brain.physics.corner_analyzer import CornerAnalysis
 from brain.physics.straight_analyzer import StraightAnalysis
@@ -104,17 +105,19 @@ def rule_coast_time(corner: CornerAnalysis) -> list[Verdict]:
     Every 0.1s of coast at 80 km/h ~= 2.2m of track covered at sub-optimal speed.
     """
     verdicts = []
+    profile = get_active_profile()
     ct = corner.exit.coast_time_s
-    if ct <= 0.05:
+    if ct <= profile.coast_time_flag_s:
         return verdicts
 
     # Estimate time loss: coast_time * (1 - decel_proportion)
     # Simplified: coast time is ~70% wasted (you should be on brake or throttle)
     estimated_loss = ct * 0.7
 
-    if ct > 0.3:
+    flag = profile.coast_time_flag_s
+    if ct > flag * 6:       # e.g. 0.30s for autonomous, 1.8s for human
         sev = Severity.HIGH
-    elif ct > 0.15:
+    elif ct > flag * 3:     # e.g. 0.15s for autonomous, 0.9s for human
         sev = Severity.MEDIUM
     else:
         sev = Severity.LOW
@@ -138,7 +141,7 @@ def rule_coast_time(corner: CornerAnalysis) -> list[Verdict]:
         ),
         computed_delta_s=estimated_loss,
         computed_value=ct,
-        reference_value=0.05,
+        reference_value=profile.coast_time_flag_s,
         unit="seconds",
     ))
     return verdicts
@@ -736,8 +739,12 @@ def compute_all_verdicts(
             if len(top_3) == 3:
                 break
 
+    # Limit to max_verdicts from profile (autonomous=20, human=5)
+    profile = get_active_profile()
+    capped_verdicts = all_verdicts[:profile.max_verdicts]
+
     result = CoachingVerdicts(
-        verdicts=all_verdicts,
+        verdicts=capped_verdicts,
         total_estimated_gain_s=total_gain,
         top_3_actions=top_3,
     )

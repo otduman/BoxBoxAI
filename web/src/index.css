@@ -1,0 +1,116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 10% 7%;
+    --foreground: 0 0% 92%;
+
+    --card: 240 8% 10%;
+    --card-foreground: 0 0% 92%;
+
+    --popover: 240 8% 10%;
+    --popover-foreground: 0 0% 92%;
+
+    --primary: 0 95% 44%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 6% 16%;
+    --secondary-foreground: 0 0% 85%;
+
+    --muted: 240 5% 14%;
+    --muted-foreground: 240 4% 55%;
+
+    --accent: 240 6% 18%;
+    --accent-foreground: 0 0% 92%;
+
+    --destructive: 0 95% 44%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 240 5% 18%;
+    --input: 240 5% 18%;
+    --ring: 0 95% 44%;
+
+    --radius: 0.25rem;
+
+    /* Motorsport tokens */
+    --racing-red: 0 95% 44%;
+    --sector-purple: 270 80% 60%;
+    --sector-green: 145 70% 50%;
+    --sector-yellow: 45 95% 55%;
+    --panel-glass: 240 8% 12%;
+    --panel-border: 240 5% 20%;
+
+    --sidebar-background: 240 8% 9%;
+    --sidebar-foreground: 0 0% 92%;
+    --sidebar-primary: 0 95% 44%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 6% 16%;
+    --sidebar-accent-foreground: 0 0% 92%;
+    --sidebar-border: 240 5% 18%;
+    --sidebar-ring: 0 95% 44%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Titillium Web', sans-serif;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-card/80 backdrop-blur-md border border-border rounded;
+  }
+
+  .mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .glow-red {
+    box-shadow: 0 0 20px hsl(var(--racing-red) / 0.3);
+  }
+
+  .glow-track {
+    filter: drop-shadow(0 0 8px hsl(var(--sector-green) / 0.6));
+  }
+
+  .track-segment-best {
+    stroke: hsl(var(--sector-purple));
+    filter: drop-shadow(0 0 6px hsl(var(--sector-purple) / 0.7));
+  }
+
+  .track-segment-good {
+    stroke: hsl(var(--sector-green));
+    filter: drop-shadow(0 0 6px hsl(var(--sector-green) / 0.7));
+  }
+
+  .track-segment-slow {
+    stroke: hsl(var(--sector-yellow));
+    filter: drop-shadow(0 0 6px hsl(var(--sector-yellow) / 0.7));
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
