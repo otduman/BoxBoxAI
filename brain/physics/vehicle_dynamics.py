@@ -44,6 +44,7 @@ class GGDiagramMetrics:
 class VehicleDynamicsAnalysis:
     """Full dynamics analysis for a lap."""
     lap_number: int
+    lap_duration_s: float = 0.0
     gg_metrics: GGDiagramMetrics = field(default_factory=GGDiagramMetrics)
     events: list[DynamicsEvent] = field(default_factory=list)
     oversteer_count: int = 0
@@ -59,6 +60,10 @@ def analyze_vehicle_dynamics(
 ) -> VehicleDynamicsAnalysis:
     """Analyze vehicle dynamics for a full lap."""
     result = VehicleDynamicsAnalysis(lap_number=lap_number)
+
+    # Lap duration from timestamps
+    if "t" in lap_df.columns and len(lap_df) > 1:
+        result.lap_duration_s = float(lap_df["t"].iloc[-1] - lap_df["t"].iloc[0])
 
     result.gg_metrics = _compute_gg_metrics(lap_df)
 
@@ -145,7 +150,19 @@ def _detect_events_from_signal(
     if active[-1]:
         ends = np.concatenate([ends, [len(active)]])
 
+    # Merge intervals that are within a short gap (oscillation of the same event)
+    MERGE_GAP_S = 0.3
+    merged_starts = []
+    merged_ends = []
     for s, e in zip(starts, ends):
+        if merged_starts and t[s] - t[min(merged_ends[-1], len(t) - 1)] < MERGE_GAP_S:
+            # Extend the previous event
+            merged_ends[-1] = e
+        else:
+            merged_starts.append(s)
+            merged_ends.append(e)
+
+    for s, e in zip(merged_starts, merged_ends):
         duration = t[min(e, len(t) - 1)] - t[s]
         if duration < get_active_profile().min_event_duration_s:
             continue

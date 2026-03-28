@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Gauge, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -12,6 +12,7 @@ const Analysis = () => {
   const navigate = useNavigate();
   const { vizData, summary, isLoading, error, loadFromUrl } = useSessionStore();
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
+  const verdictListRef = useRef<HTMLDivElement>(null);
 
   // Auto-load data from public folder on mount
   useEffect(() => {
@@ -27,6 +28,17 @@ const Analysis = () => {
       setActiveIdx(idx);
     }
   };
+
+  // Auto-scroll sidebar to the active verdict card
+  useEffect(() => {
+    if (activeIdx === null) return;
+    const container = verdictListRef.current;
+    if (!container) return;
+    const el = container.querySelector(`[data-verdict-idx="${activeIdx}"]`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [activeIdx]);
 
   // Get first lap analysis
   const firstLap = summary?.lap_analyses?.["0"] ?? null;
@@ -128,7 +140,7 @@ const Analysis = () => {
           />
         </div>
 
-        {/* Sidebar — full width on mobile, fixed width on desktop */}
+        {/* Sidebar */}
         <motion.aside
           initial={{ x: 30, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
@@ -146,7 +158,7 @@ const Analysis = () => {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-3 space-y-2">
+          <div ref={verdictListRef} className="flex-1 overflow-y-auto p-3 space-y-2">
             {/* AI Coach summary */}
             {summary && <CoachPanel summary={summary} />}
 
@@ -159,7 +171,7 @@ const Analysis = () => {
                 Detailed Findings
               </p>
               {vizData.markers.map((m, i) => (
-                <div key={i} className="mb-2">
+                <div key={i} className="mb-2" data-verdict-idx={i}>
                   <VerdictCard
                     marker={m}
                     index={i}

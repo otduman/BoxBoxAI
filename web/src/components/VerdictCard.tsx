@@ -9,6 +9,14 @@ import {
 import { useState } from "react";
 import type { VizMarker } from "@/data/types";
 
+/* Unified severity colors — matches Track3D.tsx markers exactly */
+const SEV_COLORS: Record<string, { text: string; icon: string; border: string; bg: string }> = {
+  critical: { text: "text-[#dc2626]", icon: "text-[#dc2626]", border: "border-[#dc2626]/50", bg: "bg-[#dc2626]/15" },
+  high:     { text: "text-[#e10600]", icon: "text-[#e10600]", border: "border-[#e10600]/40", bg: "bg-[#e10600]/15" },
+  medium:   { text: "text-[#f97316]", icon: "text-[#f97316]", border: "border-[#f97316]/40", bg: "bg-[#f97316]/15" },
+  low:      { text: "text-[#eab308]", icon: "text-[#eab308]", border: "border-[#eab308]/30", bg: "bg-[#eab308]/15" },
+};
+
 const CATEGORY_LABELS: Record<string, string> = {
   trail_brake: "Trail Brake",
   brakes: "Braking",
@@ -31,7 +39,7 @@ interface VerdictCardProps {
 
 const VerdictCard = ({ marker, index, isActive, onClick }: VerdictCardProps) => {
   const [expanded, setExpanded] = useState(false);
-  const isHigh = marker.severity === "high" || marker.severity === "critical";
+  const sev = SEV_COLORS[marker.severity] || SEV_COLORS.low;
   const categoryLabel = CATEGORY_LABELS[marker.category] || marker.category;
 
   return (
@@ -41,7 +49,7 @@ const VerdictCard = ({ marker, index, isActive, onClick }: VerdictCardProps) => 
       transition={{ delay: index * 0.08, duration: 0.3 }}
       layout
       className={`glass-panel overflow-hidden cursor-pointer transition-colors ${
-        isActive ? "border-racing-red/50 glow-red" : "hover:border-foreground/10"
+        isActive ? `${sev.border} glow-red` : "hover:border-foreground/10"
       }`}
       onClick={onClick}
     >
@@ -49,10 +57,10 @@ const VerdictCard = ({ marker, index, isActive, onClick }: VerdictCardProps) => 
         {/* Header row */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
-            {isHigh ? (
-              <Octagon className="w-3.5 h-3.5 text-racing-red flex-shrink-0" />
+            {marker.severity === "critical" || marker.severity === "high" ? (
+              <Octagon className={`w-3.5 h-3.5 ${sev.icon} flex-shrink-0`} />
             ) : (
-              <AlertTriangle className="w-3.5 h-3.5 text-sector-yellow flex-shrink-0" />
+              <AlertTriangle className={`w-3.5 h-3.5 ${sev.icon} flex-shrink-0`} />
             )}
             <span className="text-sm font-semibold tracking-wide">
               {marker.segment}
@@ -62,7 +70,7 @@ const VerdictCard = ({ marker, index, isActive, onClick }: VerdictCardProps) => 
             </span>
           </div>
           {marker.time_impact_s > 0 && (
-            <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-racing-red/15 text-racing-red font-semibold flex items-center gap-1">
+            <span className={`font-mono text-[11px] px-2 py-0.5 rounded ${sev.bg} ${sev.text} font-semibold flex items-center gap-1`}>
               <Timer className="w-3 h-3" />
               {marker.time_impact_s.toFixed(2)}s
             </span>
@@ -77,9 +85,7 @@ const VerdictCard = ({ marker, index, isActive, onClick }: VerdictCardProps) => 
         {/* Severity + expand toggle */}
         <div className="flex items-center justify-between pl-5">
           <span
-            className={`text-[10px] uppercase tracking-[0.15em] font-semibold ${
-              isHigh ? "text-racing-red" : "text-sector-yellow"
-            }`}
+            className={`text-[10px] uppercase tracking-[0.15em] font-semibold ${sev.text}`}
           >
             {marker.severity}
           </span>

@@ -644,6 +644,19 @@ def rule_friction_utilization(dynamics: VehicleDynamicsAnalysis) -> list[Verdict
 
     sev = Severity.HIGH if util < 45 else Severity.MEDIUM
 
+    # Estimate time impact: grip deficit means slower cornering speeds.
+    # Average utilization includes straights (naturally low g), so the actual
+    # cornering-phase deficit is smaller than the raw number suggests.
+    # Conservative model: ~15% of lap time is spent at grip limit,
+    # and time scales as 1/sqrt(grip_fraction).
+    target_util = 65.0
+    grip_deficit_fraction = 1.0 - (util / target_util) ** 0.5
+    grip_limited_fraction = 0.15  # only ~15% of lap is truly grip-limited
+    estimated_loss = min(
+        dynamics.lap_duration_s * grip_limited_fraction * grip_deficit_fraction,
+        dynamics.lap_duration_s * 0.03,  # cap at 3% of lap time
+    )
+
     verdicts.append(Verdict(
         category=Category.DYNAMICS,
         severity=sev,
@@ -664,9 +677,9 @@ def rule_friction_utilization(dynamics: VehicleDynamicsAnalysis) -> list[Verdict
             "Brake harder initially (aim for 90% of max), trail-brake deeper, "
             "and apply throttle earlier on exit."
         ),
-        computed_delta_s=0.0,
+        computed_delta_s=estimated_loss,
         computed_value=util,
-        reference_value=65.0,
+        reference_value=target_util,
         unit="percent",
     ))
     return verdicts
