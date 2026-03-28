@@ -123,6 +123,7 @@ def analyze_corner(
     lap_df: pd.DataFrame,
     segment: TrackSegment,
     lap_number: int,
+    prev_segment_end_m: float | None = None,
 ) -> CornerAnalysis:
     """Analyze a single corner pass with 4-phase decomposition.
 
@@ -130,6 +131,9 @@ def analyze_corner(
         lap_df: DataFrame for the full lap (must have track_dist_m column).
         segment: The corner segment definition.
         lap_number: Which lap this is from.
+        prev_segment_end_m: End distance of the previous segment (if any),
+            used to limit brake lookback in chicanes so we don't
+            re-attribute the previous corner's braking event.
     """
     result = CornerAnalysis(segment=segment, lap_number=lap_number)
 
@@ -139,9 +143,20 @@ def analyze_corner(
 
     dist = lap_df["track_dist_m"].values
 
-    # Extend the analysis window backward to catch the braking zone
-    extended_start = segment.start_dist_m - BRAKE_ZONE_LOOKBACK_M
-    mask = (dist >= extended_start) & (dist <= segment.end_dist_m)
+    # Extend the analysis window backward to catch the braking zone.
+    # In chicanes, limit lookback to halfway between previous corner end
+    # and this corner start to avoid capturing the same brake event twice.
+    lookback = BRAKE_ZONE_LOOKBACK_M
+    if prev_segment_end_m is not None:
+        gap = segment.start_dist_m - prev_segment_end_m
+        if gap < lookback:
+            lookback = max(gap * 0.5, 10.0)  # at least 10m
+    extended_start = segment.start_dist_m - lookback
+    # Extend past segment end to capture exit data (especially for short corners
+    # where the apex may be at or near the segment boundary)
+    EXIT_LOOKAHEAD_M = 100.0
+    extended_end = segment.end_dist_m + EXIT_LOOKAHEAD_M
+    mask = (dist >= extended_start) & (dist <= extended_end)
     corner_df = lap_df[mask].copy().reset_index(drop=True)
 
     if len(corner_df) < 10:
@@ -363,8 +378,20 @@ def _analyze_exit(df, dist, t, gas, steering, brake_p, speed, segment, apex) -> 
     if apex.start_idx < 0:
         return m
 
+    # Use distance-based window first
     post_apex_mask = (dist >= apex.apex_dist_m) & (dist <= segment.end_dist_m)
     post_indices = np.where(post_apex_mask)[0]
+
+    if len(post_indices) < 3:
+        # Short corner or apex at segment edge: extend 100m past segment end
+        extended_mask = (dist >= apex.apex_dist_m) & (dist <= segment.end_dist_m + 100)
+        post_indices = np.where(extended_mask)[0]
+
+    if len(post_indices) < 3:
+        # Fallback: use index-based window from apex (next 50 samples ≈ 1s at 50Hz)
+        apex_idx = apex.start_idx
+        end_idx = min(apex_idx + 50, len(dist) - 1)
+        post_indices = np.arange(apex_idx, end_idx + 1)
 
     if len(post_indices) < 3:
         return m
@@ -418,5 +445,10 @@ def analyze_all_corners(
     lap_number: int,
 ) -> list[CornerAnalysis]:
     """Analyze all corners for a single lap."""
-    corners = [s for s in segments if s.segment_type == "corner"]
-    return [analyze_corner(lap_df, seg, lap_number) for seg in corners]
+    results = []
+    prev_end: float | None = None
+    for seg in segments:
+        if seg.segment_type == "corner":
+            results.append(analyze_corner(lap_df, seg, lap_number, prev_end))
+        prev_end = seg.end_dist_m
+    return results

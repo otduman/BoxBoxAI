@@ -44,6 +44,7 @@ class GGDiagramMetrics:
 class VehicleDynamicsAnalysis:
     """Full dynamics analysis for a lap."""
     lap_number: int
+    lap_duration_s: float = 0.0
     gg_metrics: GGDiagramMetrics = field(default_factory=GGDiagramMetrics)
     events: list[DynamicsEvent] = field(default_factory=list)
     oversteer_count: int = 0
@@ -59,6 +60,10 @@ def analyze_vehicle_dynamics(
 ) -> VehicleDynamicsAnalysis:
     """Analyze vehicle dynamics for a full lap."""
     result = VehicleDynamicsAnalysis(lap_number=lap_number)
+
+    # Lap duration from timestamps
+    if "t" in lap_df.columns and len(lap_df) > 1:
+        result.lap_duration_s = float(lap_df["t"].iloc[-1] - lap_df["t"].iloc[0])
 
     result.gg_metrics = _compute_gg_metrics(lap_df)
 
@@ -99,7 +104,7 @@ def analyze_vehicle_dynamics(
 
 def _compute_gg_metrics(df: pd.DataFrame) -> GGDiagramMetrics:
     """Compute g-g diagram summary metrics (simplified 2D friction circle model).
-    
+
     Note: This assumes a 2D friction circle. In reality, longitudinal and lateral
     forces interact based on vertical load transfer, but this simplified model
     is sufficient for driver coaching.
@@ -118,7 +123,7 @@ def _compute_gg_metrics(df: pd.DataFrame) -> GGDiagramMetrics:
     if np.isnan(ax).all() or np.isnan(ay).all():
         logger.warning("Acceleration data is all NaN, skipping g-g analysis")
         return m
-    
+
     # Filter out NaN values for calculations
     valid_mask = ~(np.isnan(ax) | np.isnan(ay))
     ax_valid = ax[valid_mask]
@@ -130,11 +135,11 @@ def _compute_gg_metrics(df: pd.DataFrame) -> GGDiagramMetrics:
     # Max braking: absolute value of most negative ax
     braking_ax = ax_valid[ax_valid < 0]
     m.max_braking_g = float(abs(braking_ax.min())) if len(braking_ax) > 0 else 0.0
-    
+
     # Max acceleration: most positive ax
     accel_ax = ax_valid[ax_valid > 0]
     m.max_accel_g = float(accel_ax.max()) if len(accel_ax) > 0 else 0.0
-    
+
     # Max lateral: absolute value of ay
     m.max_lateral_g = float(np.abs(ay_valid).max())
 
@@ -159,7 +164,7 @@ def _detect_events_from_signal(
     compare: str = "above",
 ) -> list[DynamicsEvent]:
     """Find contiguous regions where signal crosses threshold.
-    
+
     Args:
         df: DataFrame with time and distance columns
         signal: Array of values to threshold
@@ -168,12 +173,12 @@ def _detect_events_from_signal(
         compare: "above" to detect signal > threshold, "below" for signal < threshold
     """
     events = []
-    
+
     # Validate required columns
     if "t" not in df.columns:
         logger.warning(f"Time column 't' missing, cannot detect {event_type} events")
         return []
-    
+
     t = df["t"].values
     dist = df["track_dist_m"].values if "track_dist_m" in df.columns else np.zeros(len(df))
 
@@ -196,12 +201,25 @@ def _detect_events_from_signal(
     if active[-1]:
         ends = np.concatenate([ends, [len(active) - 1]])  # Use last valid index
 
+    # Merge intervals that are within a short gap (oscillation of the same event)
+    MERGE_GAP_S = 0.3
+    merged_starts = []
+    merged_ends = []
     for s, e in zip(starts, ends):
         # e is inclusive, so it's already a valid index
         if e >= len(t):
             e = len(t) - 1
-        
+
         duration = t[e] - t[s]
+        if merged_starts and t[s] - t[min(merged_ends[-1], len(t) - 1)] < MERGE_GAP_S:
+            # Extend the previous event
+            merged_ends[-1] = e
+        else:
+            merged_starts.append(s)
+            merged_ends.append(e)
+
+    for s, e in zip(merged_starts, merged_ends):
+        duration = t[min(e, len(t) - 1)] - t[s]
         if duration < get_active_profile().min_event_duration_s:
             continue
 
@@ -234,7 +252,7 @@ def _detect_events_from_signal(
 
 def _detect_oversteer(df: pd.DataFrame) -> list[DynamicsEvent]:
     """Detect oversteer events using sideslip angle (beta).
-    
+
     Oversteer occurs when |beta| exceeds threshold, indicating the rear
     is sliding more than the front (car rotating beyond driver input).
     """

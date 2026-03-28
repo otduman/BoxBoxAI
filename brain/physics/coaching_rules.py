@@ -113,10 +113,10 @@ def rule_coast_time(corner: CornerAnalysis) -> list[Verdict]:
     # Calculate time loss based on lost acceleration potential
     avg_speed_mps = corner.apex.min_speed_kmh / MPS_TO_KMH
     exit_speed_mps = corner.exit.exit_speed_kmh / MPS_TO_KMH
-    
+
     if avg_speed_mps <= 0:
         avg_speed_mps = max(exit_speed_mps, 10.0)  # 10 m/s minimum fallback
-    
+
     if exit_speed_mps > avg_speed_mps:
         # Should be accelerating during this time
         distance_traveled = ct * avg_speed_mps
@@ -183,7 +183,7 @@ def rule_trail_brake_missing(corner: CornerAnalysis) -> list[Verdict]:
     # Estimate time loss based on corner characteristics
     # Heavy braking corners benefit more from trail-braking
     corner_severity = corner.braking.deceleration_g / max(corner.apex.max_lateral_g, 0.5)
-    
+
     if corner_severity > 1.5:  # Heavy braking corner (hairpin, tight chicane)
         estimated_loss = 0.20
         sev = Severity.HIGH
@@ -290,7 +290,7 @@ def rule_late_throttle(corner: CornerAnalysis) -> list[Verdict]:
     if avg_speed_mps <= 0:
         # Fallback to exit speed if apex speed is invalid
         avg_speed_mps = max(corner.exit.exit_speed_kmh / MPS_TO_KMH, 10.0)
-    
+
     # Time spent covering the gap distance
     time_to_cover = gap_m / avg_speed_mps
     # If accelerating, this time would have added speed
@@ -477,7 +477,7 @@ def rule_apex_speed_comparison(
     user_exit = user_corner.exit.exit_speed_kmh
     ref_exit = ref_corner.exit.exit_speed_kmh
     exit_delta = user_exit - ref_exit
-    
+
     # Estimate compounding effect on following straight (100m reference)
     STRAIGHT_REF_LENGTH = 100.0
     if exit_delta < 0:
@@ -699,7 +699,7 @@ def _find_nearest_segment(
 
 def rule_friction_utilization(dynamics: VehicleDynamicsAnalysis) -> list[Verdict]:
     """Low friction circle utilization = not using the car's full grip potential.
-    
+
     Note: 60% is qualifying-pace target. Race pace is typically 55-65%.
     """
     verdicts = []
@@ -712,6 +712,19 @@ def rule_friction_utilization(dynamics: VehicleDynamicsAnalysis) -> list[Verdict
         return verdicts
 
     sev = Severity.HIGH if util < 45 else Severity.MEDIUM
+
+    # Estimate time impact: grip deficit means slower cornering speeds.
+    # Average utilization includes straights (naturally low g), so the actual
+    # cornering-phase deficit is smaller than the raw number suggests.
+    # Conservative model: ~15% of lap time is spent at grip limit,
+    # and time scales as 1/sqrt(grip_fraction).
+    target_util = 65.0
+    grip_deficit_fraction = 1.0 - (util / target_util) ** 0.5
+    grip_limited_fraction = 0.15  # only ~15% of lap is truly grip-limited
+    estimated_loss = min(
+        dynamics.lap_duration_s * grip_limited_fraction * grip_deficit_fraction,
+        dynamics.lap_duration_s * 0.03,  # cap at 3% of lap time
+    )
 
     verdicts.append(Verdict(
         category=Category.DYNAMICS,
@@ -735,7 +748,7 @@ def rule_friction_utilization(dynamics: VehicleDynamicsAnalysis) -> list[Verdict
             "Brake harder initially (aim for 90% of max), trail-brake deeper, "
             "and apply throttle earlier on exit."
         ),
-        computed_delta_s=0.0,
+        computed_delta_s=estimated_loss,
         computed_value=util,
         reference_value=QUALIFYING_TARGET,
         unit="percent",
@@ -746,38 +759,33 @@ def rule_friction_utilization(dynamics: VehicleDynamicsAnalysis) -> list[Verdict
 def rule_insufficient_acceleration(straight: StraightAnalysis) -> list[Verdict]:
     """Detect when the car is not accelerating properly on straights.
 
-    This indicates either throttle control issues, traction problems, or
-    conservative driving that leaves performance on the table.
-
-    Skips straights shorter than 100m as acceleration expectations are unrealistic
-    when too close to corners. Adjusts expectations based on entry speed and length.
+    Skips straights shorter than 150m. Accounts for:
+    - Braking zone at end of straight (driver must lift before corner → cap throttle expectation)
+    - Aero drag limiting acceleration at high speed (lower g expectation above 150 km/h)
+    - Realistic time-loss estimation using v = v0 + a*t physics
     """
     verdicts = []
 
-    # Skip very short straights - unrealistic to expect acceleration when too close to turns
-    MIN_ACCELERATION_LENGTH_M = 100.0
-    if straight.segment.length_m < MIN_ACCELERATION_LENGTH_M:
+    if straight.segment.length_m < 150.0 or straight.time_on_straight_s < 1.5:
         return verdicts
 
-    # Skip very short time straights
-    if straight.time_on_straight_s < 1.0:
-        return verdicts
+    # ── Throttle check ──
+    # Cap at 90%: the last ~10% of a straight is typically lift-and-brake zone
+    length_factor = min(straight.segment.length_m / 400.0, 1.0)
+    expected_throttle = min(60.0 + length_factor * 30.0, 90.0)
 
-    # Adjust expectations based on entry speed and straight length
-    # Higher entry speeds and longer straights should achieve better acceleration
-    entry_speed_factor = min(straight.entry_speed_kmh / 100.0, 1.0)  # Normalize to 0-1
-    length_factor = min(straight.segment.length_m / 300.0, 1.0)  # Normalize to 0-1 for 300m straights
-    expected_min_accel_g = 0.2 + (entry_speed_factor * 0.3) + (length_factor * 0.2)  # 0.2g to 0.7g range
-    expected_min_throttle_pct = 60.0 + (entry_speed_factor * 20.0) + (length_factor * 20.0)  # 60% to 100% range
+    if straight.time_at_full_throttle_pct < expected_throttle:
+        throttle_deficit = expected_throttle - straight.time_at_full_throttle_pct
+        # Physics: partial throttle means less acceleration over time
+        # lost_accel ≈ deficit_fraction × typical_accel_potential (0.4g ≈ 3.9 m/s²)
+        # avg_speed_deficit = lost_accel × time / 2  (linear build-up)
+        # time_loss ≈ distance × avg_speed_deficit / avg_speed²
+        avg_speed_mps = (straight.entry_speed_kmh + straight.top_speed_kmh) / 2.0 / 3.6
+        lost_accel = (throttle_deficit / 100.0) * 3.9  # m/s²
+        avg_v_deficit = lost_accel * straight.time_on_straight_s / 2.0
+        estimated_loss = straight.segment.length_m * avg_v_deficit / max(avg_speed_mps ** 2, 100)
 
-    # Check for low time at full throttle
-    if straight.time_at_full_throttle_pct < expected_min_throttle_pct:
-        # Estimate time loss based on how much throttle was used
-        throttle_deficit = expected_min_throttle_pct - straight.time_at_full_throttle_pct
-        # Rough estimate: 1% throttle deficit = ~0.005s time loss per second of straight
-        estimated_loss = (throttle_deficit / 100.0) * straight.time_on_straight_s * 0.005
-
-        sev = Severity.MEDIUM if throttle_deficit > 20 else Severity.LOW
+        sev = Severity.MEDIUM if throttle_deficit > 15 else Severity.LOW
 
         verdicts.append(Verdict(
             category=Category.STRAIGHT,
@@ -785,63 +793,69 @@ def rule_insufficient_acceleration(straight: StraightAnalysis) -> list[Verdict]:
             segment_id=straight.segment.segment_id,
             lap_number=straight.lap_number,
             finding=(
-                f"Only {straight.time_at_full_throttle_pct:.1f}% of straight time at full throttle "
-                f"(expected: >{expected_min_throttle_pct:.1f}% for {straight.segment.length_m:.0f}m straight "
-                f"at {straight.entry_speed_kmh:.0f} km/h entry)."
+                f"Only {straight.time_at_full_throttle_pct:.0f}% of straight at full throttle "
+                f"(expected >{expected_throttle:.0f}% for {straight.segment.length_m:.0f}m straight)."
             ),
             reasoning=(
-                f"The car spent {100 - straight.time_at_full_throttle_pct:.1f}% of the straight "
-                f"with partial throttle, missing out on maximum acceleration. "
-                f"For a {straight.segment.length_m:.0f}m straight entered at {straight.entry_speed_kmh:.0f} km/h, "
-                f"expect at least {expected_min_throttle_pct:.1f}% full throttle time."
+                f"On a {straight.segment.length_m:.0f}m straight entered at "
+                f"{straight.entry_speed_kmh:.0f} km/h, the car spent "
+                f"{100 - straight.time_at_full_throttle_pct:.0f}% of the distance with partial "
+                f"throttle, losing potential acceleration time."
             ),
             action=(
-                f"Apply full throttle immediately upon entering the straight and maintain it "
-                f"until the next corner. Only lift off throttle for gear changes or if wheelspin occurs."
+                "Get on full throttle earlier after corner exit and hold it longer "
+                "before the braking zone. Only lift for gear changes or traction issues."
             ),
             computed_delta_s=estimated_loss,
             computed_value=straight.time_at_full_throttle_pct,
-            reference_value=expected_min_throttle_pct,
+            reference_value=expected_throttle,
             unit="percent",
         ))
 
-    # Check for low acceleration
-    if straight.max_acceleration_g < expected_min_accel_g:
-        # This is a significant issue - car should be able to achieve expected acceleration
-        speed_range = straight.exit_speed_kmh - straight.entry_speed_kmh
-        expected_accel = speed_range / (straight.time_on_straight_s * 3.6)  # m/s²
+    # ── Peak acceleration check ──
+    # At high speed aero drag fights hard: expect less g above 150 km/h
+    avg_speed = (straight.entry_speed_kmh + straight.top_speed_kmh) / 2.0
+    if avg_speed > 150:
+        drag_penalty = (avg_speed - 150) / 200.0  # up to ~0.25g reduction at 200 km/h
+    else:
+        drag_penalty = 0.0
+    expected_accel = max(0.3 - drag_penalty, 0.15)
 
-        if expected_accel < expected_min_accel_g:
-            estimated_loss = straight.time_on_straight_s * 0.1  # Rough estimate
+    if straight.max_acceleration_g < expected_accel:
+        accel_deficit = expected_accel - straight.max_acceleration_g
+        # Same physics: lost_accel = deficit_g * 9.81, then distance * Δv_avg / v²
+        avg_speed_mps2 = (straight.entry_speed_kmh + straight.top_speed_kmh) / 2.0 / 3.6
+        lost_a = accel_deficit * 9.81
+        avg_v_def = lost_a * straight.time_on_straight_s / 2.0
+        estimated_loss = straight.segment.length_m * avg_v_def / max(avg_speed_mps2 ** 2, 100)
 
-            sev = Severity.HIGH if straight.max_acceleration_g < expected_min_accel_g * 0.7 else Severity.MEDIUM
+        sev = Severity.MEDIUM if accel_deficit > 0.1 else Severity.LOW
 
-            verdicts.append(Verdict(
-                category=Category.STRAIGHT,
-                severity=sev,
-                segment_id=straight.segment.segment_id,
-                lap_number=straight.lap_number,
-                finding=(
-                    f"Low acceleration on straight: {straight.max_acceleration_g:.2f}g "
-                    f"(expected: >{expected_min_accel_g:.2f}g for {straight.segment.length_m:.0f}m straight "
-                    f"at {straight.entry_speed_kmh:.0f} km/h entry)."
-                ),
-                reasoning=(
-                    f"The car achieved only {straight.max_acceleration_g:.2f}g maximum acceleration, "
-                    f"which is below expected performance for this straight. "
-                    f"For a {straight.segment.length_m:.0f}m segment entered at {straight.entry_speed_kmh:.0f} km/h, "
-                    f"expect at least {expected_min_accel_g:.2f}g acceleration."
-                ),
-                action=(
-                    f"Apply throttle more aggressively on straights. If wheelspin occurs, "
-                    f"reduce throttle slightly but maintain high acceleration. Check for traction issues "
-                    f"or mechanical problems if acceleration remains low."
-                ),
-                computed_delta_s=estimated_loss,
-                computed_value=straight.max_acceleration_g,
-                reference_value=expected_min_accel_g,
-                unit="g",
-            ))
+        verdicts.append(Verdict(
+            category=Category.STRAIGHT,
+            severity=sev,
+            segment_id=straight.segment.segment_id,
+            lap_number=straight.lap_number,
+            finding=(
+                f"Peak acceleration {straight.max_acceleration_g:.2f}g on "
+                f"{straight.segment.length_m:.0f}m straight "
+                f"(expected >{expected_accel:.2f}g at avg {avg_speed:.0f} km/h)."
+            ),
+            reasoning=(
+                f"At an average speed of {avg_speed:.0f} km/h, the car should still achieve "
+                f"at least {expected_accel:.2f}g peak longitudinal acceleration. "
+                f"The measured {straight.max_acceleration_g:.2f}g suggests traction limits or "
+                f"conservative throttle application."
+            ),
+            action=(
+                "Apply throttle more aggressively at corner exit. If rear wheelspin is the "
+                "limiting factor, consider adjusting traction control or throttle mapping."
+            ),
+            computed_delta_s=estimated_loss,
+            computed_value=straight.max_acceleration_g,
+            reference_value=expected_accel,
+            unit="g",
+        ))
 
     return verdicts
 
