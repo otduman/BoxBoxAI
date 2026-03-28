@@ -672,6 +672,109 @@ def rule_friction_utilization(dynamics: VehicleDynamicsAnalysis) -> list[Verdict
     return verdicts
 
 
+def rule_insufficient_acceleration(straight: StraightAnalysis) -> list[Verdict]:
+    """Detect when the car is not accelerating properly on straights.
+
+    This indicates either throttle control issues, traction problems, or
+    conservative driving that leaves performance on the table.
+
+    Skips straights shorter than 100m as acceleration expectations are unrealistic
+    when too close to corners. Adjusts expectations based on entry speed and length.
+    """
+    verdicts = []
+
+    # Skip very short straights - unrealistic to expect acceleration when too close to turns
+    MIN_ACCELERATION_LENGTH_M = 100.0
+    if straight.segment.length_m < MIN_ACCELERATION_LENGTH_M:
+        return verdicts
+
+    # Skip very short time straights
+    if straight.time_on_straight_s < 1.0:
+        return verdicts
+
+    # Adjust expectations based on entry speed and straight length
+    # Higher entry speeds and longer straights should achieve better acceleration
+    entry_speed_factor = min(straight.entry_speed_kmh / 100.0, 1.0)  # Normalize to 0-1
+    length_factor = min(straight.segment.length_m / 300.0, 1.0)  # Normalize to 0-1 for 300m straights
+    expected_min_accel_g = 0.2 + (entry_speed_factor * 0.3) + (length_factor * 0.2)  # 0.2g to 0.7g range
+    expected_min_throttle_pct = 60.0 + (entry_speed_factor * 20.0) + (length_factor * 20.0)  # 60% to 100% range
+
+    # Check for low time at full throttle
+    if straight.time_at_full_throttle_pct < expected_min_throttle_pct:
+        # Estimate time loss based on how much throttle was used
+        throttle_deficit = expected_min_throttle_pct - straight.time_at_full_throttle_pct
+        # Rough estimate: 1% throttle deficit = ~0.005s time loss per second of straight
+        estimated_loss = (throttle_deficit / 100.0) * straight.time_on_straight_s * 0.005
+
+        sev = Severity.MEDIUM if throttle_deficit > 20 else Severity.LOW
+
+        verdicts.append(Verdict(
+            category=Category.STRAIGHT,
+            severity=sev,
+            segment_id=straight.segment.segment_id,
+            lap_number=straight.lap_number,
+            finding=(
+                f"Only {straight.time_at_full_throttle_pct:.1f}% of straight time at full throttle "
+                f"(expected: >{expected_min_throttle_pct:.1f}% for {straight.segment.length_m:.0f}m straight "
+                f"at {straight.entry_speed_kmh:.0f} km/h entry)."
+            ),
+            reasoning=(
+                f"The car spent {100 - straight.time_at_full_throttle_pct:.1f}% of the straight "
+                f"with partial throttle, missing out on maximum acceleration. "
+                f"For a {straight.segment.length_m:.0f}m straight entered at {straight.entry_speed_kmh:.0f} km/h, "
+                f"expect at least {expected_min_throttle_pct:.1f}% full throttle time."
+            ),
+            action=(
+                f"Apply full throttle immediately upon entering the straight and maintain it "
+                f"until the next corner. Only lift off throttle for gear changes or if wheelspin occurs."
+            ),
+            computed_delta_s=estimated_loss,
+            computed_value=straight.time_at_full_throttle_pct,
+            reference_value=expected_min_throttle_pct,
+            unit="percent",
+        ))
+
+    # Check for low acceleration
+    if straight.max_acceleration_g < expected_min_accel_g:
+        # This is a significant issue - car should be able to achieve expected acceleration
+        speed_range = straight.exit_speed_kmh - straight.entry_speed_kmh
+        expected_accel = speed_range / (straight.time_on_straight_s * 3.6)  # m/s²
+
+        if expected_accel < expected_min_accel_g:
+            estimated_loss = straight.time_on_straight_s * 0.1  # Rough estimate
+
+            sev = Severity.HIGH if straight.max_acceleration_g < expected_min_accel_g * 0.7 else Severity.MEDIUM
+
+            verdicts.append(Verdict(
+                category=Category.STRAIGHT,
+                severity=sev,
+                segment_id=straight.segment.segment_id,
+                lap_number=straight.lap_number,
+                finding=(
+                    f"Low acceleration on straight: {straight.max_acceleration_g:.2f}g "
+                    f"(expected: >{expected_min_accel_g:.2f}g for {straight.segment.length_m:.0f}m straight "
+                    f"at {straight.entry_speed_kmh:.0f} km/h entry)."
+                ),
+                reasoning=(
+                    f"The car achieved only {straight.max_acceleration_g:.2f}g maximum acceleration, "
+                    f"which is below expected performance for this straight. "
+                    f"For a {straight.segment.length_m:.0f}m segment entered at {straight.entry_speed_kmh:.0f} km/h, "
+                    f"expect at least {expected_min_accel_g:.2f}g acceleration."
+                ),
+                action=(
+                    f"Apply throttle more aggressively on straights. If wheelspin occurs, "
+                    f"reduce throttle slightly but maintain high acceleration. Check for traction issues "
+                    f"or mechanical problems if acceleration remains low."
+                ),
+                computed_delta_s=estimated_loss,
+                computed_value=straight.max_acceleration_g,
+                reference_value=expected_min_accel_g,
+                unit="g",
+            ))
+
+    return verdicts
+
+
 # ---------------------------------------------------------------------------
 # Master orchestrator
 # ---------------------------------------------------------------------------
@@ -713,6 +816,11 @@ def compute_all_verdicts(
             if ref:
                 all_verdicts.extend(rule_braking_comparison(ca, ref))
                 all_verdicts.extend(rule_apex_speed_comparison(ca, ref))
+
+    # Per-straight rules
+    for lap_num, straights in straight_analyses.items():
+        for sa in straights:
+            all_verdicts.extend(rule_insufficient_acceleration(sa))
 
     # Per-lap dynamics rules
     segs = segments or []
