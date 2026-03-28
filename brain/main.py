@@ -202,7 +202,7 @@ def run_pipeline(
     # Inject deterministic verdicts into the summary
     summary["deterministic_coaching"] = verdicts_to_dict(coaching_verdicts)
 
-    save_session_summary(summary, output_path)
+    save_session_summary(summary, output_path, master_df=master)
 
     # --- Step 7: Build LLM prompt (explains verdicts, does not generate them) ---
     logger.info("Step 7/7: Building LLM prompt...")

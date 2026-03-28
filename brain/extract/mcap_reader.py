@@ -1,9 +1,5 @@
 """
 High-speed MCAP reader: extracts ROS 2 telemetry into pandas DataFrames.
-
-Uses mcap + mcap-ros2-support to decode .mcap files directly without
-requiring a ROS 2 installation. Aligns multi-rate topics onto a single
-50 Hz master timeline.
 """
 
 import time
@@ -17,7 +13,6 @@ from mcap_ros2.decoder import DecoderFactory
 
 from brain.config import TARGET_HZ
 from brain.extract.topic_registry import (
-    TopicSpec,
     get_all_topics,
     get_primary_topics,
     get_topic_map,
@@ -56,7 +51,11 @@ def read_mcap(
     decoder = DecoderFactory()
 
     with open(mcap_path, "rb") as f:
-        reader = make_reader(f, decoder_factories=[decoder])
+        try:
+            #TODO: if make reader fails then make sure to stop, so it does not iterate the user
+            reader = make_reader(f, decoder_factories=[decoder])
+        except Exception as e:
+            logger.error(f"Failed to open MCAP file: {mcap_path}")
 
         for schema, channel, message, decoded_msg in reader.iter_decoded_messages(
             topics=list(wanted_topics)
@@ -129,8 +128,15 @@ def build_master_dataframe(
 
     se = topic_dfs["state_estimation"].copy()
 
-    # Decimate StateEstimation from ~100 Hz to TARGET_HZ
-    step = max(1, round(100 / TARGET_HZ))
+    # Decimate StateEstimation to TARGET_HZ
+    # Calculate source frequency from the first few samples
+    if len(se) > 1:
+        dt = se["t"].iloc[1] - se["t"].iloc[0]
+        source_hz = 1.0 / dt if dt > 0 else 100.0
+    else:
+        source_hz = 100.0
+
+    step = max(1, round(source_hz / TARGET_HZ))
     master = se.iloc[::step].copy()
     master.reset_index(drop=True, inplace=True)
 
@@ -177,7 +183,15 @@ def extract_session(
     """
     t0 = time.perf_counter()
 
-    raw_dfs = read_mcap(mcap_path, primary_only=primary_only)
+    try:
+        raw_dfs = read_mcap(mcap_path, primary_only=primary_only)
+    except FileNotFoundError as exc:
+        logger.error(f"Failed to read MCAP file: {mcap_path}")
+        raise
+    except Exception as exc:
+        logger.error(f"Failed to extract session from MCAP file: {mcap_path}")
+        raise
+
     master = build_master_dataframe(raw_dfs)
 
     elapsed = time.perf_counter() - t0

@@ -36,8 +36,20 @@ def split_laps(
     """Split session into individual laps.
 
     Tries BadeniaMisc lap_number first, falls back to sn_idx wraparound.
+    
+    Args:
+        master: Master DataFrame with merged telemetry
+        raw_dfs: Reserved for future use (e.g., fallback to raw topic data)
     """
-    laps = _split_by_lap_number(master, raw_dfs)
+    # Validate input
+    if master.empty or len(master) < MIN_LAP_DURATION_S * 50:  # 50Hz assumption
+        logger.warning(
+            f"Insufficient data for lap detection "
+            f"({len(master)} samples, need ~{MIN_LAP_DURATION_S * 50})"
+        )
+        return []
+    
+    laps = _split_by_lap_number(master)
 
     if not laps:
         logger.info("BadeniaMisc lap_number not available, falling back to sn_idx")
@@ -45,15 +57,23 @@ def split_laps(
 
     if not laps:
         logger.warning("Could not detect lap boundaries — treating entire session as one lap")
+        
+        # Populate track distance if available
+        start_dist = 0.0
+        end_dist = 0.0
+        if "track_dist_m" in master.columns:
+            start_dist = float(master["track_dist_m"].iloc[0])
+            end_dist = float(master["track_dist_m"].iloc[-1])
+        
         laps = [Lap(
             lap_number=1,
             start_idx=0,
             end_idx=len(master) - 1,
-            start_time=master["t"].iloc[0],
-            end_time=master["t"].iloc[-1],
-            duration_s=master["t"].iloc[-1] - master["t"].iloc[0],
-            start_dist_m=0.0,
-            end_dist_m=0.0,
+            start_time=float(master["t"].iloc[0]),
+            end_time=float(master["t"].iloc[-1]),
+            duration_s=float(master["t"].iloc[-1] - master["t"].iloc[0]),
+            start_dist_m=start_dist,
+            end_dist_m=end_dist,
         )]
 
     # Filter out incomplete laps
@@ -73,11 +93,12 @@ def split_laps(
     return valid
 
 
-def _split_by_lap_number(
-    master: pd.DataFrame,
-    raw_dfs: dict[str, pd.DataFrame] | None,
-) -> list[Lap]:
-    """Split using lap_number from BadeniaMisc topic."""
+def _split_by_lap_number(master: pd.DataFrame) -> list[Lap]:
+    """Split using lap_number from BadeniaMisc topic.
+    
+    Detects lap transitions instead of grouping by lap number,
+    which handles duplicate lap sequences (e.g., two sessions in one file).
+    """
     # Check if lap_number is in master (merged from badenia_misc)
     col = None
     for candidate in ["lap_number", "badenia_misc__lap_number"]:
@@ -92,32 +113,106 @@ def _split_by_lap_number(
     if lap_numbers.empty:
         return []
 
-    # Round to int
+    # Forward/backward fill and convert to int
     master_ln = master[col].ffill().bfill().astype(int)
-    unique_laps = sorted(master_ln.unique())
-
-    if len(unique_laps) < 1:
+    
+    # Find lap transitions (where lap number changes)
+    lap_changes = np.concatenate([[True], np.diff(master_ln.values) != 0, [True]])
+    lap_boundaries = np.where(lap_changes)[0]
+    
+    if len(lap_boundaries) < 2:
         return []
 
     laps = []
-    for ln in unique_laps:
-        mask = master_ln == ln
-        indices = master.index[mask]
-        if len(indices) < 10:
+    for i in range(len(lap_boundaries) - 1):
+        start_pos = lap_boundaries[i]
+        end_pos = lap_boundaries[i + 1] - 1
+        
+        if end_pos - start_pos < 10:
             continue
-
-        start_idx = indices[0]
-        end_idx = indices[-1]
+        
+        ln = master_ln.iloc[start_pos]
 
         # Track distance if available
         start_dist = 0.0
         end_dist = 0.0
         if "track_dist_m" in master.columns:
-            start_dist = master["track_dist_m"].iloc[start_idx]
-            end_dist = master["track_dist_m"].iloc[end_idx]
+            start_dist = float(master["track_dist_m"].iloc[start_pos])
+            end_dist = float(master["track_dist_m"].iloc[end_pos])
 
         laps.append(Lap(
             lap_number=int(ln),
+            start_idx=int(start_pos),
+            end_idx=int(end_pos),
+            start_time=float(master["t"].iloc[start_pos]),
+            end_time=float(master["t"].iloc[end_pos]),
+            duration_s=float(master["t"].iloc[end_pos] - master["t"].iloc[start_pos]),
+            start_dist_m=start_dist,
+            end_dist_m=end_dist,
+        ))
+
+    # Validate sequential lap numbers
+    if laps:
+        lap_nums = [lap.lap_number for lap in laps]
+        unique_nums = sorted(set(lap_nums))
+        if len(unique_nums) > 1:
+            expected = list(range(unique_nums[0], unique_nums[-1] + 1))
+            if unique_nums != expected:
+                missing = set(expected) - set(unique_nums)
+                logger.warning(f"Non-sequential lap numbers detected. Missing: {missing}")
+
+    return laps
+
+
+def _split_by_sn_wraparound(master: pd.DataFrame) -> list[Lap]:
+    """Split using sn_idx wraparound (track position resets near start/finish).
+    
+    Detects wraparound using both magnitude and value criteria to avoid false positives.
+    """
+    if "sn_idx" not in master.columns:
+        return []
+
+    sn = master["sn_idx"].values
+    if np.isnan(sn).all():
+        return []
+
+    # Detect wraparound with more robust criteria
+    max_sn = np.nanmax(sn)
+    min_sn = np.nanmin(sn)
+    if max_sn < 10:
+        return []
+
+    diff = np.diff(sn)
+    # Wraparound must satisfy TWO conditions:
+    # 1. Large negative jump (>30% of max)
+    # 2. New value must be near minimum (within 10% of range from min)
+    threshold = -max_sn * 0.3
+    sn_range = max_sn - min_sn
+    wraparound_mask = (diff < threshold) & (sn[1:] < min_sn + sn_range * 0.1)
+    wrap_points = np.where(wraparound_mask)[0] + 1  # +1 for index after diff
+
+    if len(wrap_points) == 0:
+        return []
+
+    # Build lap boundaries (end is exclusive in slice, so don't subtract 1)
+    boundaries = [0] + list(wrap_points) + [len(master)]
+    laps = []
+    for i in range(len(boundaries) - 1):
+        start_idx = boundaries[i]
+        end_idx = boundaries[i + 1] - 1  # Inclusive end index
+        
+        if end_idx - start_idx < 10:
+            continue
+
+        # Populate track distance if available
+        start_dist = 0.0
+        end_dist = 0.0
+        if "track_dist_m" in master.columns:
+            start_dist = float(master["track_dist_m"].iloc[start_idx])
+            end_dist = float(master["track_dist_m"].iloc[end_idx])
+
+        laps.append(Lap(
+            lap_number=i + 1,
             start_idx=int(start_idx),
             end_idx=int(end_idx),
             start_time=float(master["t"].iloc[start_idx]),
@@ -130,49 +225,26 @@ def _split_by_lap_number(
     return laps
 
 
-def _split_by_sn_wraparound(master: pd.DataFrame) -> list[Lap]:
-    """Split using sn_idx wraparound (track position resets near start/finish)."""
-    if "sn_idx" not in master.columns:
-        return []
-
-    sn = master["sn_idx"].values
-    if np.isnan(sn).all():
-        return []
-
-    # Detect wraparound: sn_idx drops significantly (>50% of max)
-    max_sn = np.nanmax(sn)
-    if max_sn < 10:
-        return []
-
-    diff = np.diff(sn)
-    # Wraparound = large negative jump
-    threshold = -max_sn * 0.5
-    wrap_points = np.where(diff < threshold)[0] + 1  # +1 for index after diff
-
-    if len(wrap_points) == 0:
-        return []
-
-    # Build lap boundaries
-    boundaries = [0] + list(wrap_points) + [len(master) - 1]
-    laps = []
-    for i in range(len(boundaries) - 1):
-        start_idx = boundaries[i]
-        end_idx = boundaries[i + 1] - 1 if i < len(boundaries) - 2 else boundaries[i + 1]
-
-        laps.append(Lap(
-            lap_number=i + 1,
-            start_idx=int(start_idx),
-            end_idx=int(end_idx),
-            start_time=float(master["t"].iloc[start_idx]),
-            end_time=float(master["t"].iloc[end_idx]),
-            duration_s=float(master["t"].iloc[end_idx] - master["t"].iloc[start_idx]),
-            start_dist_m=0.0,
-            end_dist_m=0.0,
-        ))
-
-    return laps
-
-
 def get_lap_data(master: pd.DataFrame, lap: Lap) -> pd.DataFrame:
-    """Extract the master DataFrame slice for a single lap."""
+    """Extract the master DataFrame slice for a single lap.
+    
+    Args:
+        master: Master DataFrame with full session data
+        lap: Lap object with start/end indices
+        
+    Returns:
+        DataFrame slice for the lap, with index reset to 0
+    """
+    # Validate lap indices
+    if lap.end_idx >= len(master):
+        logger.warning(
+            f"Lap {lap.lap_number} end_idx ({lap.end_idx}) exceeds data length ({len(master)}). "
+            f"Truncating to available data."
+        )
+        lap.end_idx = len(master) - 1
+    
+    if lap.start_idx < 0 or lap.start_idx >= len(master):
+        logger.error(f"Lap {lap.lap_number} has invalid start_idx ({lap.start_idx})")
+        return pd.DataFrame()
+    
     return master.iloc[lap.start_idx:lap.end_idx + 1].copy().reset_index(drop=True)

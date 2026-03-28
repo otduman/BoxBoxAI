@@ -102,7 +102,7 @@ def rule_coast_time(corner: CornerAnalysis) -> list[Verdict]:
 
     Physics: During coast, the car is neither decelerating (using brake grip)
     nor accelerating (using traction). It is just losing speed to drag.
-    Every 0.1s of coast at 80 km/h ~= 2.2m of track covered at sub-optimal speed.
+    The time loss depends on the acceleration potential being wasted.
     """
     verdicts = []
     profile = get_active_profile()
@@ -110,14 +110,32 @@ def rule_coast_time(corner: CornerAnalysis) -> list[Verdict]:
     if ct <= profile.coast_time_flag_s:
         return verdicts
 
-    # Estimate time loss: coast_time * (1 - decel_proportion)
-    # Simplified: coast time is ~70% wasted (you should be on brake or throttle)
-    estimated_loss = ct * 0.7
+    # Calculate time loss based on lost acceleration potential
+    avg_speed_mps = corner.apex.min_speed_kmh / MPS_TO_KMH
+    exit_speed_mps = corner.exit.exit_speed_kmh / MPS_TO_KMH
+    
+    if avg_speed_mps <= 0:
+        avg_speed_mps = max(exit_speed_mps, 10.0)  # 10 m/s minimum fallback
+    
+    if exit_speed_mps > avg_speed_mps:
+        # Should be accelerating during this time
+        distance_traveled = ct * avg_speed_mps
+        # Typical race car acceleration: 2.0 m/s² (conservative)
+        potential_exit_speed = avg_speed_mps + (ct * 2.0)
+        # Time to cover same distance if accelerating
+        time_if_accel = distance_traveled / ((avg_speed_mps + min(potential_exit_speed, exit_speed_mps)) / 2)
+        estimated_loss = max(0, ct - time_if_accel)
+    else:
+        # Already at or near target speed, less critical
+        estimated_loss = ct * 0.3
 
+    # Severity thresholds
+    SEVERE_MULTIPLIER = 6
+    MODERATE_MULTIPLIER = 3
     flag = profile.coast_time_flag_s
-    if ct > flag * 6:       # e.g. 0.30s for autonomous, 1.8s for human
+    if ct > flag * SEVERE_MULTIPLIER:
         sev = Severity.HIGH
-    elif ct > flag * 3:     # e.g. 0.15s for autonomous, 0.9s for human
+    elif ct > flag * MODERATE_MULTIPLIER:
         sev = Severity.MEDIUM
     else:
         sev = Severity.LOW
@@ -131,11 +149,12 @@ def rule_coast_time(corner: CornerAnalysis) -> list[Verdict]:
             f"{ct:.2f}s of coasting between brake release and throttle application."
         ),
         reasoning=(
-            f"During {ct:.2f}s of coast, the car travels ~{ct * corner.apex.min_speed_kmh / 3.6:.0f}m "
-            f"with no acceleration or deceleration. This is pure time loss to aerodynamic drag."
+            f"During {ct:.2f}s of coast, the car travels ~{ct * avg_speed_mps:.0f}m "
+            f"with no acceleration. With typical race car acceleration (~2 m/s²), "
+            f"you could have gained {ct * 2.0 * MPS_TO_KMH:.1f} km/h during this time."
         ),
         action=(
-            f"Overlap brake release with throttle application. Target coast time < 0.05s. "
+            f"Overlap brake release with throttle application. Target coast time < {profile.coast_time_flag_s:.2f}s. "
             f"As the left foot releases the brake, the right foot should already be "
             f"progressively applying throttle."
         ),
@@ -161,11 +180,23 @@ def rule_trail_brake_missing(corner: CornerAnalysis) -> list[Verdict]:
     if corner.trail_brake.brake_while_turning:
         return verdicts
 
-    estimated_loss = 0.15  # Conservative: trail-braking typically saves 0.1-0.3s per corner
+    # Estimate time loss based on corner characteristics
+    # Heavy braking corners benefit more from trail-braking
+    corner_severity = corner.braking.deceleration_g / max(corner.apex.max_lateral_g, 0.5)
+    
+    if corner_severity > 1.5:  # Heavy braking corner (hairpin, tight chicane)
+        estimated_loss = 0.20
+        sev = Severity.HIGH
+    elif corner_severity > 0.8:  # Medium corner
+        estimated_loss = 0.10
+        sev = Severity.HIGH
+    else:  # Fast corner
+        estimated_loss = 0.05
+        sev = Severity.MEDIUM
 
     verdicts.append(Verdict(
         category=Category.TRAIL_BRAKE,
-        severity=Severity.HIGH,
+        severity=sev,
         segment_id=corner.segment.segment_id,
         lap_number=corner.lap_number,
         finding=(
@@ -175,7 +206,8 @@ def rule_trail_brake_missing(corner: CornerAnalysis) -> list[Verdict]:
             f"Releasing the brake before turning unloads the front axle at exactly the moment "
             f"you need front grip for turn-in. This forces a slower entry speed or causes "
             f"understeer. Trail-braking keeps weight forward, enabling higher entry speed "
-            f"and a tighter line."
+            f"and a tighter line. For this corner (decel/lateral ratio: {corner_severity:.1f}), "
+            f"trail-braking typically saves {estimated_loss:.2f}s."
         ),
         action=(
             f"Maintain light brake pressure (20-30% of peak) as you begin steering. "
@@ -253,12 +285,19 @@ def rule_late_throttle(corner: CornerAnalysis) -> list[Verdict]:
     if gap_m <= 10:
         return verdicts
 
-    # Estimate: gap_m / avg_speed * inefficiency_factor
+    # Calculate time loss based on speed and lost acceleration
     avg_speed_mps = corner.apex.min_speed_kmh / MPS_TO_KMH
-    if avg_speed_mps > 0:
-        coast_equiv_s = gap_m / avg_speed_mps * 0.5
-    else:
-        coast_equiv_s = 0.1
+    if avg_speed_mps <= 0:
+        # Fallback to exit speed if apex speed is invalid
+        avg_speed_mps = max(corner.exit.exit_speed_kmh / MPS_TO_KMH, 10.0)
+    
+    # Time spent covering the gap distance
+    time_to_cover = gap_m / avg_speed_mps
+    # If accelerating, this time would have added speed
+    # Typical race car: 2 m/s² acceleration
+    lost_speed_gain_kmh = time_to_cover * 2.0 * MPS_TO_KMH
+    # Speed loss compounds on next straight (100m reference)
+    coast_equiv_s = time_to_cover * 0.5 + (lost_speed_gain_kmh * 0.05)
 
     sev = Severity.HIGH if gap_m > 30 else Severity.MEDIUM
 
@@ -273,8 +312,8 @@ def rule_late_throttle(corner: CornerAnalysis) -> list[Verdict]:
         ),
         reasoning=(
             f"The car covers {gap_m:.0f}m between the apex and first throttle application "
-            f"without accelerating. On exit, every meter of delay costs exit speed "
-            f"that compounds down the following straight."
+            f"without accelerating. This costs approximately {lost_speed_gain_kmh:.1f} km/h "
+            f"of exit speed that compounds down the following straight."
         ),
         action=(
             f"Begin progressive throttle application at or slightly before the apex. "
@@ -339,6 +378,12 @@ def rule_braking_comparison(
     user_bp = user_corner.braking.brake_point_dist_m
     ref_bp = ref_corner.braking.brake_point_dist_m
     if user_bp <= 0 or ref_bp <= 0:
+        return verdicts
+
+    # Only compare brake points if entry speeds are similar
+    entry_speed_delta = abs(user_corner.entry_speed_kmh - ref_corner.entry_speed_kmh)
+    if entry_speed_delta > 5:
+        # Different entry speeds, can't directly compare brake points
         return verdicts
 
     delta_m = user_bp - ref_bp  # Positive = user braked earlier
@@ -427,14 +472,32 @@ def rule_apex_speed_comparison(
     if delta >= -2:
         return verdicts
 
-    # Time impact: Apex speed deficit over the corner length
-    corner_len = user_corner.segment.length_m
-    if corner_len > 0 and user_v > 0:
-        user_time = corner_len / (user_v / MPS_TO_KMH)
-        ref_time = corner_len / (ref_v / MPS_TO_KMH)
-        time_loss = user_time - ref_time
+    # Time impact: Lower apex speed → lower exit speed → compounding loss on straight
+    # Calculate exit speed delta
+    user_exit = user_corner.exit.exit_speed_kmh
+    ref_exit = ref_corner.exit.exit_speed_kmh
+    exit_delta = user_exit - ref_exit
+    
+    # Estimate compounding effect on following straight (100m reference)
+    STRAIGHT_REF_LENGTH = 100.0
+    if exit_delta < 0:
+        # Every 1 km/h exit speed deficit costs ~0.05s per 100m of straight
+        time_loss = abs(exit_delta) * STRAIGHT_REF_LENGTH / 100 * 0.05
     else:
-        time_loss = 0.1
+        # Apex speed lower but exit speed similar/better - just corner time loss
+        corner_len = user_corner.segment.length_m
+        if corner_len > 0:
+            # Use average speed through corner, not just apex speed
+            avg_user = (user_v + user_exit) / 2
+            avg_ref = (ref_v + ref_exit) / 2
+            if avg_user > 0:
+                user_time = corner_len / (avg_user / MPS_TO_KMH)
+                ref_time = corner_len / (avg_ref / MPS_TO_KMH)
+                time_loss = max(0, user_time - ref_time)
+            else:
+                time_loss = 0.1
+        else:
+            time_loss = 0.1
 
     sev = Severity.HIGH if delta < -8 else Severity.MEDIUM
 
@@ -448,9 +511,9 @@ def rule_apex_speed_comparison(
             f"(you: {user_v:.1f} km/h, ref: {ref_v:.1f} km/h)."
         ),
         reasoning=(
-            f"Carrying {abs(delta):.1f} km/h less through the apex of a {corner_len:.0f}m corner "
-            f"costs approximately {time_loss:.2f}s. This deficit also means lower exit speed, "
-            f"compounding down the following straight."
+            f"Carrying {abs(delta):.1f} km/h less through the apex results in "
+            f"{abs(exit_delta):.1f} km/h exit speed deficit. This compounds down "
+            f"the following straight, costing approximately {time_loss:.2f}s."
         ),
         action=(
             f"To increase apex speed by {abs(delta):.0f} km/h: "
@@ -540,10 +603,11 @@ def rule_lockup(
     verdicts = []
 
     # Filter lockup events: remove those in the first N seconds (sensor settling)
+    # Only apply filter if we have a valid lap start time
     lockup_events = [
         e for e in dynamics.events
         if e.event_type == "lockup"
-        and (e.start_time - lap_start_time) >= _STARTUP_FILTER_S
+        and (lap_start_time == 0.0 or (e.start_time - lap_start_time) >= _STARTUP_FILTER_S)
     ]
 
     if not lockup_events:
@@ -634,10 +698,15 @@ def _find_nearest_segment(
 
 
 def rule_friction_utilization(dynamics: VehicleDynamicsAnalysis) -> list[Verdict]:
-    """Low friction circle utilization = not using the car's full grip potential."""
+    """Low friction circle utilization = not using the car's full grip potential.
+    
+    Note: 60% is qualifying-pace target. Race pace is typically 55-65%.
+    """
     verdicts = []
     util = dynamics.gg_metrics.friction_circle_utilization_pct
-    if util >= 65:
+    # Threshold: 60% for qualifying-level analysis
+    QUALIFYING_TARGET = 60.0
+    if util >= QUALIFYING_TARGET:
         return verdicts
     if util <= 0:
         return verdicts
@@ -651,13 +720,15 @@ def rule_friction_utilization(dynamics: VehicleDynamicsAnalysis) -> list[Verdict
         lap_number=dynamics.lap_number,
         finding=(
             f"Friction circle utilization: {util:.1f}% "
-            f"(peak combined g: {dynamics.gg_metrics.peak_combined_g:.2f}g)."
+            f"(peak combined g: {dynamics.gg_metrics.peak_combined_g:.2f}g, "
+            f"target: >{QUALIFYING_TARGET:.0f}% for qualifying pace)."
         ),
         reasoning=(
             f"The car is using only {util:.1f}% of its available grip on average. "
-            f"The remaining {100 - util:.0f}% is untapped performance. "
+            f"The remaining {QUALIFYING_TARGET - util:.0f}% to target is untapped performance. "
             f"This typically means: braking is not hard enough, cornering is too conservative, "
-            f"or there is too much coasting between inputs."
+            f"or there is too much coasting between inputs. For race pace, 55-65% is normal; "
+            f"for qualifying, aim for 65-75%."
         ),
         action=(
             "Focus on always being on either brake or throttle — never coasting. "
@@ -666,7 +737,7 @@ def rule_friction_utilization(dynamics: VehicleDynamicsAnalysis) -> list[Verdict
         ),
         computed_delta_s=0.0,
         computed_value=util,
-        reference_value=65.0,
+        reference_value=QUALIFYING_TARGET,
         unit="percent",
     ))
     return verdicts
@@ -722,20 +793,21 @@ def compute_all_verdicts(
         all_verdicts.extend(rule_lockup(da, segs, start_times.get(lap_num, 0.0)))
         all_verdicts.extend(rule_friction_utilization(da))
 
-    # Sort by estimated time impact (biggest gains first)
+    # Sort by estimated time impact (biggest gains first), then severity
     all_verdicts.sort(key=lambda v: (-v.computed_delta_s, v.severity.value))
 
     # Compute totals
     total_gain = sum(v.computed_delta_s for v in all_verdicts)
 
-    # Top 3 actions (deduplicated by category+segment)
-    seen = set()
+    # Top 3 actions: prioritize high-impact verdicts, include segment ID for specificity
+    # Don't deduplicate - if Turn 1 and Turn 3 both have critical braking issues, show both
     top_3 = []
     for v in all_verdicts:
-        key = (v.category, v.segment_id)
-        if key not in seen and v.computed_delta_s > 0:
-            seen.add(key)
-            top_3.append(v.action)
+        if v.computed_delta_s > 0.05 or v.severity in (Severity.CRITICAL, Severity.HIGH):
+            action_with_context = v.action
+            if v.segment_id:
+                action_with_context = f"[{v.segment_id}] {v.action}"
+            top_3.append(action_with_context)
             if len(top_3) == 3:
                 break
 

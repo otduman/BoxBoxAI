@@ -145,6 +145,10 @@ def analyze_corner(
     corner_df = lap_df[mask].copy().reset_index(drop=True)
 
     if len(corner_df) < 10:
+        logger.warning(
+            f"Insufficient data for corner {segment.segment_id} lap {lap_number} "
+            f"(only {len(corner_df)} points)"
+        )
         return result
 
     corner_dist = corner_df["track_dist_m"].values
@@ -199,6 +203,13 @@ def analyze_corner(
         speed, segment, result.apex
     )
 
+    # Validate phase order
+    if result.apex.start_idx > 0 and result.trail_brake.end_idx > result.apex.start_idx:
+        logger.warning(
+            f"Phase overlap in {segment.segment_id} lap {lap_number}: "
+            f"trail-brake extends past apex"
+        )
+
     return result
 
 
@@ -210,45 +221,45 @@ def _analyze_braking(df, dist, t, brake_p, ax, segment) -> BrakingMetrics:
     if not brake_on.any():
         return m
 
-    # Find first brake application before geometric corner start
-    pre_corner = dist < segment.start_dist_m
-    brake_in_approach = brake_on & pre_corner
-    if not brake_in_approach.any():
-        brake_in_corner = brake_on & (dist >= segment.start_dist_m)
-        if not brake_in_corner.any():
-            return m
-        m.start_idx = int(np.argmax(brake_in_corner))
-    else:
-        m.start_idx = int(np.argmax(brake_in_approach))
-
+    # Find first brake application in the extended window
+    m.start_idx = int(np.argmax(brake_on))
     m.brake_point_dist_m = float(dist[m.start_idx])
     m.start_dist_m = m.brake_point_dist_m
 
-    # Find end of heavy braking
-    peak_idx = m.start_idx + int(brake_p[m.start_idx:].argmax())
+    # Find end of heavy braking (search only until corner end to avoid next corner)
+    corner_end_mask = dist <= segment.end_dist_m
+    if corner_end_mask.any():
+        search_end = int(np.where(corner_end_mask)[0][-1]) + 1
+    else:
+        search_end = len(brake_p)
+    
+    search_end = min(search_end, len(brake_p))
+    peak_idx = m.start_idx + int(brake_p[m.start_idx:search_end].argmax())
     peak = brake_p[peak_idx]
     m.peak_brake_pressure_pa = float(peak)
 
     trail_threshold = peak * BRAKE_TRAIL_FRACTION
-    after_peak = brake_p[peak_idx:]
+    after_peak = brake_p[peak_idx:search_end]
     below_trail = after_peak < trail_threshold
     if below_trail.any():
-        m.end_idx = peak_idx + int(np.argmax(below_trail))
+        m.end_idx = min(peak_idx + int(np.argmax(below_trail)), len(brake_p) - 1)
     else:
-        m.end_idx = len(brake_p) - 1
+        m.end_idx = min(search_end - 1, len(brake_p) - 1)
 
-    m.end_dist_m = float(dist[min(m.end_idx, len(dist) - 1)])
+    m.end_dist_m = float(dist[m.end_idx])
     m.duration_s = float(t[m.end_idx] - t[m.start_idx]) if m.end_idx > m.start_idx else 0.0
 
     # Peak deceleration
     if m.start_idx < m.end_idx:
         m.deceleration_g = float(np.abs(ax[m.start_idx:m.end_idx + 1]).max() / G_ACCEL)
 
-    # Initial application rate (Pa/s in first ~100ms = ~5 samples at 50Hz)
-    n_init = min(5, m.end_idx - m.start_idx)
-    if n_init > 1:
-        dt = t[m.start_idx + n_init] - t[m.start_idx]
-        dp = brake_p[m.start_idx + n_init] - brake_p[m.start_idx]
+    # Initial application rate (time-based, not sample-based)
+    TARGET_INIT_TIME = 0.1  # 100ms industry standard
+    init_mask = (t >= t[m.start_idx]) & (t <= t[m.start_idx] + TARGET_INIT_TIME) & (np.arange(len(t)) <= m.end_idx)
+    init_indices = np.where(init_mask)[0]
+    if len(init_indices) > 1:
+        dt = t[init_indices[-1]] - t[init_indices[0]]
+        dp = brake_p[init_indices[-1]] - brake_p[init_indices[0]]
         m.initial_application_rate_pa_s = float(dp / dt) if dt > 0 else 0.0
 
     return m
@@ -265,7 +276,7 @@ def _analyze_trail_brake(df, dist, t, brake_p, steering, braking) -> TrailBrakeM
     after_start = brake_p[start:]
     fully_off = after_start < BRAKE_OFF_THRESHOLD_PA
     if fully_off.any():
-        end = start + int(np.argmax(fully_off))
+        end = min(start + int(np.argmax(fully_off)), len(brake_p) - 1)
     else:
         end = len(brake_p) - 1
 
@@ -275,12 +286,18 @@ def _analyze_trail_brake(df, dist, t, brake_p, steering, braking) -> TrailBrakeM
     m.start_idx = start
     m.end_idx = end
     m.start_dist_m = float(dist[start])
-    m.end_dist_m = float(dist[min(end, len(dist) - 1)])
+    m.end_dist_m = float(dist[end])
     m.duration_s = float(t[end] - t[start])
 
-    m.brake_while_turning = bool(
-        (steering[start:end + 1] > STEERING_DEADBAND_RAD).any()
-    )
+    # Check if steering is active AND increasing during trail-brake phase
+    # (filters out steering unwinding from previous corner)
+    steer_slice = steering[start:end + 1]
+    steer_active = steer_slice > STEERING_DEADBAND_RAD
+    if len(steer_slice) > 1:
+        steer_increasing = np.diff(steer_slice) > 0
+        m.brake_while_turning = bool(steer_active.any() and steer_increasing.any())
+    else:
+        m.brake_while_turning = bool(steer_active.any())
 
     # Quality: R-squared of linear brake pressure decay
     trail_slice = brake_p[start:end + 1]
@@ -296,7 +313,7 @@ def _analyze_trail_brake(df, dist, t, brake_p, steering, braking) -> TrailBrakeM
 
 
 def _analyze_apex(df, dist, t, speed_smooth, ay, segment) -> ApexMetrics:
-    """Find the apex: minimum speed within the geometric corner."""
+    """Find the apex: minimum speed (slow corners) or max lateral-g (fast corners)."""
     m = ApexMetrics()
 
     geo_mask = (dist >= segment.start_dist_m) & (dist <= segment.end_dist_m)
@@ -305,8 +322,18 @@ def _analyze_apex(df, dist, t, speed_smooth, ay, segment) -> ApexMetrics:
     if len(geo_indices) < 3:
         return m
 
+    # Calculate max lateral g first
+    m.max_lateral_g = float(np.abs(ay[geo_indices]).max() / G_ACCEL)
+
+    # Apex detection strategy depends on corner speed
     speeds_in_corner = speed_smooth[geo_indices]
-    apex_local = int(speeds_in_corner.argmin())
+    if m.max_lateral_g > 1.0:
+        # Fast corner: use maximum lateral g as apex
+        apex_local = int(np.abs(ay[geo_indices]).argmax())
+    else:
+        # Slow corner: use minimum speed as apex
+        apex_local = int(speeds_in_corner.argmin())
+    
     apex_i = geo_indices[apex_local]
 
     m.start_idx = apex_i
@@ -314,15 +341,17 @@ def _analyze_apex(df, dist, t, speed_smooth, ay, segment) -> ApexMetrics:
     m.apex_dist_m = float(dist[apex_i])
     m.start_dist_m = m.apex_dist_m
     m.end_dist_m = m.apex_dist_m
-    m.min_speed_kmh = float(speeds_in_corner[apex_local] * MPS_TO_KMH)
-    m.max_lateral_g = float(np.abs(ay[geo_indices]).max() / G_ACCEL)
+    m.min_speed_kmh = float(speed_smooth[apex_i] * MPS_TO_KMH)
 
     if "sn_n" in df.columns:
         val = df["sn_n"].iloc[apex_i]
         m.lateral_offset_m = float(val) if not np.isnan(val) else 0.0
 
+    # Sideslip: measure in window around apex, not entire corner
     if "beta_rad" in df.columns:
-        m.peak_sideslip_rad = float(np.abs(df["beta_rad"].iloc[geo_indices]).max())
+        apex_window_start = max(0, apex_i - 5)
+        apex_window_end = min(len(df), apex_i + 6)
+        m.peak_sideslip_rad = float(np.abs(df["beta_rad"].iloc[apex_window_start:apex_window_end]).max())
 
     return m
 
@@ -347,19 +376,29 @@ def _analyze_exit(df, dist, t, gas, steering, brake_p, speed, segment, apex) -> 
     m.duration_s = float(t[m.end_idx] - t[m.start_idx])
     m.exit_speed_kmh = float(speed[m.end_idx] * MPS_TO_KMH)
 
-    # Throttle application point
+    # Throttle application point - first sustained throttle
     throttle_on = gas[post_indices] > THROTTLE_ON_THRESHOLD
     if throttle_on.any():
         throttle_i = post_indices[int(np.argmax(throttle_on))]
         m.throttle_point_dist_m = float(dist[throttle_i])
 
-    # Coast time: gap between brake-off and throttle-on
-    brake_off = brake_p[post_indices] < BRAKE_OFF_THRESHOLD_PA
-    if brake_off.any() and throttle_on.any():
-        brake_off_i = post_indices[int(np.argmax(brake_off))]
+    # Coast time: gap between last brake-on and first throttle-on
+    brake_on_mask = brake_p[post_indices] >= BRAKE_OFF_THRESHOLD_PA
+    if throttle_on.any():
+        if brake_on_mask.any():
+            # Find last point where brakes are still on
+            last_brake_on = int(np.where(brake_on_mask)[0][-1])
+            brake_off_i = post_indices[min(last_brake_on + 1, len(post_indices) - 1)]
+        else:
+            # Brakes already off at apex
+            brake_off_i = post_indices[0]
+        
         throttle_on_i = post_indices[int(np.argmax(throttle_on))]
         if throttle_on_i > brake_off_i:
             m.coast_time_s = float(t[throttle_on_i] - t[brake_off_i])
+        else:
+            # Throttle before brake fully released (overlap, good!)
+            m.coast_time_s = 0.0
 
     # Rear wheelspin (uses config threshold, raw units not 0-1)
     from brain.config import WHEELSPIN_LAMBDA_THRESHOLD

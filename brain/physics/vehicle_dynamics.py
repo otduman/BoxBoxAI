@@ -73,11 +73,18 @@ def analyze_vehicle_dynamics(
     result.lockup_count = len(lockup_events)
     result.wheelspin_count = len(wheelspin_events)
 
-    if result.oversteer_count > result.understeer_count + 2:
-        result.balance_tendency = "oversteer"
-    elif result.understeer_count > result.oversteer_count + 2:
-        result.balance_tendency = "understeer"
+    # Determine balance tendency using ratio (more robust than absolute count)
+    total_balance_events = result.oversteer_count + result.understeer_count
+    if total_balance_events >= 3:  # Need enough events to be meaningful
+        oversteer_pct = result.oversteer_count / total_balance_events
+        if oversteer_pct > 0.65:  # >65% of balance events are oversteer
+            result.balance_tendency = "oversteer"
+        elif oversteer_pct < 0.35:  # <35% oversteer (i.e., >65% understeer)
+            result.balance_tendency = "understeer"
+        else:
+            result.balance_tendency = "neutral"
     else:
+        # Not enough balance events to determine tendency
         result.balance_tendency = "neutral"
 
     logger.info(
@@ -91,27 +98,55 @@ def analyze_vehicle_dynamics(
 
 
 def _compute_gg_metrics(df: pd.DataFrame) -> GGDiagramMetrics:
-    """Compute g-g diagram summary metrics."""
+    """Compute g-g diagram summary metrics (simplified 2D friction circle model).
+    
+    Note: This assumes a 2D friction circle. In reality, longitudinal and lateral
+    forces interact based on vertical load transfer, but this simplified model
+    is sufficient for driver coaching.
+    """
     m = GGDiagramMetrics()
 
-    ax = df.get("ax_mps2", pd.Series(dtype=float)).fillna(0).values / G_ACCEL
-    ay = df.get("ay_mps2", pd.Series(dtype=float)).fillna(0).values / G_ACCEL
-
-    if len(ax) == 0:
+    # Validate acceleration data exists
+    if "ax_mps2" not in df.columns or "ay_mps2" not in df.columns:
+        logger.warning("Acceleration data (ax_mps2/ay_mps2) not available for g-g analysis")
         return m
 
-    m.max_braking_g = float(np.abs(ax[ax < 0]).max()) if (ax < 0).any() else 0.0
-    m.max_accel_g = float(ax[ax > 0].max()) if (ax > 0).any() else 0.0
-    m.max_lateral_g = float(np.abs(ay).max())
+    ax = df["ax_mps2"].values / G_ACCEL
+    ay = df["ay_mps2"].values / G_ACCEL
 
-    combined = np.sqrt(ax**2 + ay**2)
+    # Check if data is valid (not all NaN)
+    if np.isnan(ax).all() or np.isnan(ay).all():
+        logger.warning("Acceleration data is all NaN, skipping g-g analysis")
+        return m
+    
+    # Filter out NaN values for calculations
+    valid_mask = ~(np.isnan(ax) | np.isnan(ay))
+    ax_valid = ax[valid_mask]
+    ay_valid = ay[valid_mask]
+
+    if len(ax_valid) == 0:
+        return m
+
+    # Max braking: absolute value of most negative ax
+    braking_ax = ax_valid[ax_valid < 0]
+    m.max_braking_g = float(abs(braking_ax.min())) if len(braking_ax) > 0 else 0.0
+    
+    # Max acceleration: most positive ax
+    accel_ax = ax_valid[ax_valid > 0]
+    m.max_accel_g = float(accel_ax.max()) if len(accel_ax) > 0 else 0.0
+    
+    # Max lateral: absolute value of ay
+    m.max_lateral_g = float(np.abs(ay_valid).max())
+
+    # Combined g (vector magnitude)
+    combined = np.sqrt(ax_valid**2 + ay_valid**2)
     m.peak_combined_g = float(combined.max())
     m.avg_combined_g = float(combined.mean())
 
-    max_grip = m.peak_combined_g
-    if max_grip > 0:
-        utilization = combined / max_grip
-        m.friction_circle_utilization_pct = float(utilization.mean() * 100)
+    # Friction circle utilization: average g as percentage of peak g
+    # (This measures how consistently the driver uses the available grip)
+    if m.peak_combined_g > 0:
+        m.friction_circle_utilization_pct = float((m.avg_combined_g / m.peak_combined_g) * 100)
 
     return m
 
@@ -123,8 +158,22 @@ def _detect_events_from_signal(
     event_type: str,
     compare: str = "above",
 ) -> list[DynamicsEvent]:
-    """Find contiguous regions where signal crosses threshold."""
+    """Find contiguous regions where signal crosses threshold.
+    
+    Args:
+        df: DataFrame with time and distance columns
+        signal: Array of values to threshold
+        threshold: Threshold value (can be negative for lockup)
+        event_type: Type of event ("oversteer", "understeer", "lockup", "wheelspin")
+        compare: "above" to detect signal > threshold, "below" for signal < threshold
+    """
     events = []
+    
+    # Validate required columns
+    if "t" not in df.columns:
+        logger.warning(f"Time column 't' missing, cannot detect {event_type} events")
+        return []
+    
     t = df["t"].values
     dist = df["track_dist_m"].values if "track_dist_m" in df.columns else np.zeros(len(df))
 
@@ -136,27 +185,35 @@ def _detect_events_from_signal(
     if not active.any():
         return events
 
+    # Find event boundaries
     diff = np.diff(active.astype(int))
     starts = np.where(diff == 1)[0] + 1
     ends = np.where(diff == -1)[0] + 1
 
+    # Handle events at boundaries
     if active[0]:
         starts = np.concatenate([[0], starts])
     if active[-1]:
-        ends = np.concatenate([ends, [len(active)]])
+        ends = np.concatenate([ends, [len(active) - 1]])  # Use last valid index
 
     for s, e in zip(starts, ends):
-        duration = t[min(e, len(t) - 1)] - t[s]
+        # e is inclusive, so it's already a valid index
+        if e >= len(t):
+            e = len(t) - 1
+        
+        duration = t[e] - t[s]
         if duration < get_active_profile().min_event_duration_s:
             continue
 
-        peak = float(np.abs(signal[s:e]).max())
+        # Find peak value in event window
+        event_slice = signal[s:e + 1]
+        peak = float(np.abs(event_slice).max()) if len(event_slice) > 0 else 0.0
         track_d = float(dist[s])
 
+        # Severity based on how far beyond threshold
         severity = "mild"
-        abs_thresh = abs(threshold)
-        if abs_thresh > 0:
-            ratio = peak / abs_thresh
+        if abs(threshold) > 0:
+            ratio = abs(peak) / abs(threshold)
             if ratio > 2.0:
                 severity = "severe"
             elif ratio > 1.5:
@@ -165,7 +222,7 @@ def _detect_events_from_signal(
         events.append(DynamicsEvent(
             event_type=event_type,
             start_time=float(t[s]),
-            end_time=float(t[min(e, len(t) - 1)]),
+            end_time=float(t[e]),
             duration_s=duration,
             peak_value=peak,
             track_dist_m=track_d,
@@ -176,12 +233,18 @@ def _detect_events_from_signal(
 
 
 def _detect_oversteer(df: pd.DataFrame) -> list[DynamicsEvent]:
+    """Detect oversteer events using sideslip angle (beta).
+    
+    Oversteer occurs when |beta| exceeds threshold, indicating the rear
+    is sliding more than the front (car rotating beyond driver input).
+    """
     if "beta_rad" not in df.columns:
         return []
     profile = get_active_profile()
-    beta = np.abs(df["beta_rad"].fillna(0).values)
+    beta = df["beta_rad"].fillna(0).values
+    # Use absolute value for threshold comparison while keeping original values
     return _detect_events_from_signal(
-        df, beta, profile.oversteer_beta_threshold_rad, "oversteer", "above"
+        df, np.abs(beta), profile.oversteer_beta_threshold_rad, "oversteer", "above"
     )
 
 

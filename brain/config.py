@@ -54,10 +54,10 @@ PROFILE_AUTONOMOUS = DriverProfile(
     lockup_lambda_threshold=-3.0,      # Raw units; ~3% beyond normal operating range
     wheelspin_lambda_threshold=5.0,    # Raw units; beyond peak traction slip
     min_event_duration_s=0.02,         # 20ms — controller reacts this fast
-    oversteer_beta_threshold_rad=0.05, # ~2.9 deg — subtle but intentional for a controller
-    slip_angle_warning_rad=0.12,       # ~7 deg — approaching grip limit
+    oversteer_beta_threshold_rad=0.08, # ~4.6 deg — allows normal racing rotation
+    slip_angle_warning_rad=0.15,       # ~8.6 deg — race tires peak at 8-12 deg
     coast_time_flag_s=0.05,            # 50ms — any coast is notable for a controller
-    trail_brake_fraction=0.50,         # Trail-brake detection at 50% of peak
+    trail_brake_fraction=0.30,         # 30% of peak to catch subtle trail-braking
     max_verdicts=20,                   # Controller can digest many verdicts
 )
 
@@ -81,9 +81,9 @@ PROFILE_HUMAN = DriverProfile(
     wheelspin_lambda_threshold=8.0,    # Beyond peak traction; TC kicks in at 3-8%
     min_event_duration_s=0.10,         # 100ms min — humans can't feel <100ms events
     oversteer_beta_threshold_rad=0.08, # ~4.6 deg — normal rotation below this
-    slip_angle_warning_rad=0.12,       # ~7 deg — same for both (tire physics)
+    slip_angle_warning_rad=0.15,       # ~8.6 deg — race tires peak at 8-12 deg
     coast_time_flag_s=0.30,            # 300ms — below this is just human reaction time
-    trail_brake_fraction=0.50,         # Same for both
+    trail_brake_fraction=0.30,         # 30% of peak to catch subtle trail-braking
     max_verdicts=5,                    # Humans can process 3-5 actions per session
 )
 
@@ -118,9 +118,9 @@ SMOOTHING_ORDER = 2
 MEDIAN_FILTER_WINDOW = 5
 
 # Braking Detection
-BRAKE_ON_THRESHOLD_PA = 500_000
-BRAKE_OFF_THRESHOLD_PA = 100_000
-BRAKE_TRAIL_FRACTION = 0.50
+BRAKE_ON_THRESHOLD_PA = 100_000    # 1 bar — light brake touch detection
+BRAKE_OFF_THRESHOLD_PA = 50_000    # 0.5 bar — hysteresis for release
+BRAKE_TRAIL_FRACTION = 0.30        # 30% of peak for trail-brake detection
 
 # Steering
 STEERING_DEADBAND_RAD = 0.017
@@ -136,11 +136,11 @@ MIN_STRAIGHT_LENGTH_M = 50.0
 CHICANE_MERGE_GAP_M = 20.0
 
 # Vehicle Dynamics (kept as module-level for backward compat, but prefer profile)
-OVERSTEER_BETA_THRESHOLD_RAD = 0.05
+OVERSTEER_BETA_THRESHOLD_RAD = 0.08  # ~4.6 deg — allows normal racing rotation
 LOCKUP_LAMBDA_THRESHOLD = -3.0
 WHEELSPIN_LAMBDA_THRESHOLD = 5.0
-SLIP_ANGLE_WARNING_RAD = 0.12
-MAX_LATERAL_G_ESTIMATE = 15.0
+SLIP_ANGLE_WARNING_RAD = 0.15        # ~8.6 deg — race tire peak zone
+MAX_LATERAL_G_ESTIMATE = 6.0         # F1-level downforce car peak lateral g
 
 # Tire Temperature
 TIRE_TEMP_IMBALANCE_THRESHOLD_C = 8.0
