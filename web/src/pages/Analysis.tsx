@@ -72,25 +72,25 @@ const Analysis = () => {
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="border-b border-border px-4 py-3 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-4">
+      <header className="border-b border-border px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center gap-2 sm:gap-4">
           <button
             onClick={() => navigate("/")}
             className="p-1.5 rounded hover:bg-accent transition-colors"
           >
             <ArrowLeft className="w-4 h-4 text-muted-foreground" />
           </button>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <div className="w-6 h-6 rounded bg-racing-red flex items-center justify-center">
               <Gauge className="w-3 h-3 text-primary-foreground" />
             </div>
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3 sm:gap-6">
               <div>
-                <p className="text-xs text-muted-foreground leading-none">Track</p>
-                <p className="text-sm font-semibold tracking-wide">{trackName}</p>
+                <p className="text-[10px] text-muted-foreground leading-none">Track</p>
+                <p className="text-xs sm:text-sm font-semibold tracking-wide">{trackName}</p>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground leading-none">Laps</p>
+              <div className="hidden sm:block">
+                <p className="text-[10px] text-muted-foreground leading-none">Laps</p>
                 <p className="text-sm font-semibold tracking-wide">
                   {summary?.session?.total_laps ?? "-"}
                 </p>
@@ -99,17 +99,17 @@ const Analysis = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <div className="text-right">
             <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">Lap Time</p>
-            <p className="font-mono text-xl font-bold tracking-tight text-sector-green">{lapTime}</p>
+            <p className="font-mono text-base sm:text-xl font-bold tracking-tight text-sector-green">{lapTime}</p>
           </div>
           {totalGain > 0 && (
             <div className="text-right">
               <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-                Potential Gain
+                Gain
               </p>
-              <p className="font-mono text-sm font-semibold text-racing-red">
+              <p className="font-mono text-xs sm:text-sm font-semibold text-racing-red">
                 +{totalGain.toFixed(2)}s
               </p>
             </div>
@@ -117,10 +117,10 @@ const Analysis = () => {
         </div>
       </header>
 
-      {/* Main content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* 3D Map area */}
-        <div className="flex-1 relative">
+      {/* Main content — side-by-side on desktop, stacked on mobile */}
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        {/* Track map */}
+        <div className="h-[45vh] md:h-auto md:flex-1 relative flex-shrink-0">
           <Track3D
             data={vizData}
             activeMarkerIdx={activeIdx}
@@ -128,14 +128,14 @@ const Analysis = () => {
           />
         </div>
 
-        {/* Sidebar */}
+        {/* Sidebar — full width on mobile, fixed width on desktop */}
         <motion.aside
           initial={{ x: 30, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.4, delay: 0.2 }}
-          className="w-[340px] flex-shrink-0 border-l border-border flex flex-col overflow-hidden"
+          className="flex-1 md:flex-none md:w-[340px] border-t md:border-t-0 md:border-l border-border flex flex-col overflow-hidden"
         >
-          <div className="px-4 py-3 border-b border-border flex-shrink-0">
+          <div className="px-3 sm:px-4 py-2 sm:py-3 border-b border-border flex-shrink-0">
             <div className="flex items-center justify-between">
               <h2 className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
                 Race Coach

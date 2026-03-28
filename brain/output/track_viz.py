@@ -14,6 +14,7 @@ import logging
 from pathlib import Path
 
 import numpy as np
+from scipy.spatial import cKDTree
 
 from brain.track.boundaries import TrackGeometry
 from brain.track.segmentation import TrackSegment
@@ -40,6 +41,14 @@ def _dist_to_xy(track: TrackGeometry, dist_m: float) -> tuple[float, float]:
     return float(track.centerline[idx, 0]), float(track.centerline[idx, 1])
 
 
+def _snap_to_trajectory(
+    x: float, y: float, tree: cKDTree, car_xy: np.ndarray
+) -> tuple[float, float]:
+    """Snap an (x, y) point to the nearest point on the car trajectory."""
+    _, idx = tree.query([x, y])
+    return float(car_xy[idx, 0]), float(car_xy[idx, 1])
+
+
 def build_viz_data(
     track: TrackGeometry,
     segments: list[TrackSegment],
@@ -62,12 +71,20 @@ def build_viz_data(
     left = _decimate(track.left)
     right = _decimate(track.right)
 
+    # Build KD-tree from car trajectory for snapping markers onto the road
+    car_tree = cKDTree(car_xy) if car_xy is not None else None
+
     # Segment regions with XY bounds
     seg_data = []
     for seg in segments:
         sx, sy = _dist_to_xy(track, seg.start_dist_m)
         ex, ey = _dist_to_xy(track, seg.end_dist_m)
         ax, ay = _dist_to_xy(track, seg.apex_dist_m)
+        # Snap segment points to car trajectory when available
+        if car_tree is not None and car_xy is not None:
+            sx, sy = _snap_to_trajectory(sx, sy, car_tree, car_xy)
+            ex, ey = _snap_to_trajectory(ex, ey, car_tree, car_xy)
+            ax, ay = _snap_to_trajectory(ax, ay, car_tree, car_xy)
         seg_data.append({
             "id": seg.segment_id,
             "type": seg.segment_type,
@@ -81,7 +98,7 @@ def build_viz_data(
         })
 
     # Verdict markers with XY positions
-    # Map segment IDs to their apex/midpoint XY
+    # Map segment IDs to their apex/midpoint XY (already snapped if car_xy exists)
     seg_xy_map = {s["id"]: s["apex"] for s in seg_data}
 
     markers = []
@@ -90,8 +107,11 @@ def build_viz_data(
         if v.segment_id and v.segment_id in seg_xy_map:
             mx, my = seg_xy_map[v.segment_id]
         else:
-            # Lap-level verdict — place at start/finish
-            mx, my = float(cl[0, 0]), float(cl[0, 1])
+            # Lap-level verdict — snap to car trajectory start, or fallback to centerline
+            if car_tree is not None and car_xy is not None:
+                mx, my = float(car_xy[0, 0]), float(car_xy[0, 1])
+            else:
+                mx, my = float(cl[0, 0]), float(cl[0, 1])
 
         markers.append({
             "x": mx,

@@ -110,8 +110,8 @@ export default function Track3D({ data, activeMarkerIdx, onMarkerClick }: Track3
     [roadLine]
   );
 
-  // Canvas size tracking (only resize when container changes, not every frame)
-  const canvasSizeRef = useRef({ w: 0, h: 0 });
+  // Canvas size tracking (resize when container or zoom level changes)
+  const canvasSizeRef = useRef({ w: 0, h: 0, zoom: 1 });
 
   // Default (overview) view
   const overviewView: ViewState = useMemo(
@@ -179,15 +179,24 @@ export default function Track3D({ data, activeMarkerIdx, onMarkerClick }: Track3
       const w = wrap.clientWidth;
       const h = wrap.clientHeight;
 
-      // Only resize canvas buffer when container size actually changes
-      if (canvasSizeRef.current.w !== w || canvasSizeRef.current.h !== h) {
-        canvas.width = w * dpr;
-        canvas.height = h * dpr;
+      // Compute zoom ratio: how much we're zoomed in relative to overview
+      const curView = currentView.current ?? overviewView;
+      const zoomRatio = Math.min(bounds.size / curView.viewSize, 4); // cap at 4x
+      // Scale canvas buffer with zoom so detail stays sharp
+      const bufferScale = dpr * Math.max(1, Math.ceil(zoomRatio));
+
+      if (
+        canvasSizeRef.current.w !== w ||
+        canvasSizeRef.current.h !== h ||
+        canvasSizeRef.current.zoom !== bufferScale
+      ) {
+        canvas.width = w * bufferScale;
+        canvas.height = h * bufferScale;
         canvas.style.width = w + "px";
         canvas.style.height = h + "px";
-        canvasSizeRef.current = { w, h };
+        canvasSizeRef.current = { w, h, zoom: bufferScale };
       }
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.setTransform(bufferScale, 0, 0, bufferScale, 0, 0);
 
       // Animate view interpolation
       if (currentView.current && targetView.current) {
