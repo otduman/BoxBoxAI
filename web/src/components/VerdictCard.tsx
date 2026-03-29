@@ -66,9 +66,10 @@ interface VerdictCardProps {
   isActive: boolean;
   onClick: () => void;
   showLapBadge?: boolean;
+  mcapFile?: string;
 }
 
-const VerdictCard = ({ marker, index, isActive, onClick, showLapBadge }: VerdictCardProps) => {
+const VerdictCard = ({ marker, index, isActive, onClick, showLapBadge, mcapFile }: VerdictCardProps) => {
   const [expanded, setExpanded] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
   const sev = SEV_COLORS[marker.severity] || SEV_COLORS.low;
@@ -174,6 +175,7 @@ const VerdictCard = ({ marker, index, isActive, onClick, showLapBadge }: Verdict
                 timestamp_s={marker.timestamp_s!}
                 segment={marker.segment}
                 finding={marker.finding}
+                mcapFile={mcapFile}
                 onClose={() => setShowVideo(false)}
               />
             </div>

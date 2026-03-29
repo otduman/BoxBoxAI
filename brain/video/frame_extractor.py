@@ -150,6 +150,101 @@ def extract_frame_at_timestamp(
     return None
 
 
+def extract_frames_around_timestamp(
+    mcap_path: Path | str,
+    target_time_s: float,
+    camera_topic: str | None = None,
+    num_frames: int = 5,
+    span_s: float = 2.0,
+) -> list[ExtractedFrame]:
+    """
+    Extract multiple frames around a target timestamp.
+
+    Args:
+        mcap_path: Path to MCAP file
+        target_time_s: Center timestamp in seconds (absolute or relative)
+        camera_topic: Specific camera topic, or None to auto-detect
+        num_frames: Number of frames to extract (default 5)
+        span_s: Total time span in seconds (default 2.0s = ±1s around target)
+
+    Returns:
+        List of ExtractedFrame objects, evenly spaced around the target
+    """
+    try:
+        from mcap_ros2.decoder import DecoderFactory
+    except ImportError:
+        logger.warning("mcap_ros2 not installed, cannot extract frames")
+        return []
+
+    # Determine which topic to use
+    if camera_topic is None:
+        available = get_available_cameras(mcap_path)
+        for preferred in CAMERA_TOPICS:
+            if preferred in available:
+                camera_topic = preferred
+                break
+        if camera_topic is None and available:
+            camera_topic = available[0]
+        if camera_topic is None:
+            logger.warning(f"No camera topics found in {mcap_path}")
+            return []
+
+    # Calculate target timestamps for each frame
+    half_span = span_s / 2
+    step = span_s / (num_frames - 1) if num_frames > 1 else 0
+    target_times = [target_time_s - half_span + i * step for i in range(num_frames)]
+
+    # Auto-detect if timestamp is absolute (Unix epoch) or relative
+    is_absolute_timestamp = target_time_s > 1_500_000_000
+
+    # Track best frame for each target
+    best_frames: list[ExtractedFrame | None] = [None] * num_frames
+    best_diffs: list[float] = [float("inf")] * num_frames
+    tolerance_s = step / 2 + 0.1  # Half step + small buffer
+
+    session_start_ns = None
+
+    with open(mcap_path, "rb") as f:
+        reader = make_reader(f, decoder_factories=[DecoderFactory()])
+
+        for schema, channel, message, decoded in reader.iter_decoded_messages(
+            topics=[camera_topic]
+        ):
+            if session_start_ns is None:
+                session_start_ns = message.log_time
+
+            # Get message time in same units as targets
+            if is_absolute_timestamp:
+                msg_time_s = message.log_time / 1e9
+            else:
+                msg_time_s = (message.log_time - session_start_ns) / 1e9
+
+            # Check against each target timestamp
+            for i, target in enumerate(target_times):
+                diff = abs(msg_time_s - target)
+                if diff < best_diffs[i]:
+                    best_diffs[i] = diff
+                    best_frames[i] = ExtractedFrame(
+                        timestamp_ns=message.log_time,
+                        camera=camera_topic.split("/")[-2],
+                        format=decoded.format,
+                        data=bytes(decoded.data),
+                    )
+
+            # Early exit if we've passed all targets
+            last_target = target_times[-1]
+            if msg_time_s > last_target + tolerance_s:
+                break
+
+    # Filter out frames that are too far from their targets
+    result = []
+    for i, (frame, diff) in enumerate(zip(best_frames, best_diffs)):
+        if frame is not None and diff <= tolerance_s:
+            result.append(frame)
+
+    return result
+
+
 def extract_frames_for_verdicts(
     mcap_path: Path | str,
     verdicts: list[dict],

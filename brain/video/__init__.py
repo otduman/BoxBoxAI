@@ -3,6 +3,7 @@
 from .frame_extractor import (
     ExtractedFrame,
     extract_frame_at_timestamp,
+    extract_frames_around_timestamp,
     extract_frames_batch,
     extract_frames_for_verdicts,
     get_available_cameras,
@@ -11,6 +12,7 @@ from .frame_extractor import (
 __all__ = [
     "ExtractedFrame",
     "extract_frame_at_timestamp",
+    "extract_frames_around_timestamp",
     "extract_frames_batch",
     "extract_frames_for_verdicts",
     "get_available_cameras",

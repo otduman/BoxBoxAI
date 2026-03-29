@@ -208,6 +208,7 @@ const Analysis = () => {
                     timestamp_s={activeMarker.timestamp_s}
                     segment={activeMarker.segment}
                     finding={activeMarker.finding}
+                    mcapFile={vizData?.mcap_file}
                   />
                 </div>
               </motion.div>
@@ -342,6 +343,7 @@ const Analysis = () => {
                       isActive={activeIdx === origIdx}
                       onClick={() => handleMarkerClick(origIdx)}
                       showLapBadge={isMultiLap}
+                      mcapFile={vizData.mcap_file}
                     />
                   </div>
                 );
