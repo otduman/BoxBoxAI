@@ -12,3 +12,4 @@ pydantic>=2.6.0
 # AI Coach - requires GEMINI_API_KEY
 google-genai>=0.5.0
 python-dotenv>=1.0.0
+python-multipart>=0.0.9
