@@ -15,7 +15,8 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from brain.main import run_pipeline
@@ -371,3 +372,21 @@ async def moment_coaching(request: MomentCoachingRequest):
     )
 
     return JSONResponse(result)
+
+
+# ---------------------------------------------------------------------------
+# Serve built React frontend (production)
+# Must be mounted last so API routes take precedence
+# ---------------------------------------------------------------------------
+
+_frontend_dist = Path(__file__).parent.parent / "web" / "dist"
+if _frontend_dist.exists():
+    app.mount("/assets", StaticFiles(directory=str(_frontend_dist / "assets")), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_frontend(full_path: str):
+        """Serve the React SPA for all non-API routes."""
+        file = _frontend_dist / full_path
+        if file.is_file():
+            return FileResponse(str(file))
+        return FileResponse(str(_frontend_dist / "index.html"))
