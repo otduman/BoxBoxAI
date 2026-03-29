@@ -250,7 +250,7 @@ def run_pipeline(
         "lap_scores": lap_scores,
     }
 
-    save_session_summary(summary, output_path, master_df=master)
+    save_session_summary(summary, output_path)
 
     # --- Step 7: Build LLM prompt (explains verdicts, does not generate them) ---
     logger.info("Step 7/7: Building LLM prompt...")
