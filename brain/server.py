@@ -52,49 +52,69 @@ async def analyze(
     """Run the full pipeline on an uploaded MCAP file.
 
     Returns { viz_data, session_summary } as a single JSON payload.
+    Also persists the MCAP file for video frame extraction.
     """
+    global _uploaded_mcap_path
+
     if not mcap.filename or not mcap.filename.endswith(".mcap"):
         raise HTTPException(400, "Expected a .mcap file")
 
-    with tempfile.TemporaryDirectory() as tmp:
-        tmp_path = Path(tmp)
+    # Ensure upload directory exists
+    upload_dir = Path(__file__).parent.parent / "uploads"
+    upload_dir.mkdir(exist_ok=True)
 
-        # Save uploaded MCAP
-        mcap_path = tmp_path / mcap.filename
-        mcap_bytes = await mcap.read()
-        mcap_path.write_bytes(mcap_bytes)
+    # Save uploaded MCAP persistently (for video frame extraction)
+    mcap_path = upload_dir / mcap.filename
+    mcap_bytes = await mcap.read()
+    mcap_path.write_bytes(mcap_bytes)
+    _uploaded_mcap_path = mcap_path
+    logger.info(f"Saved uploaded MCAP to {mcap_path}")
 
-        # Save or use default boundary file
-        if boundaries and boundaries.filename:
-            bnd_path = tmp_path / boundaries.filename
-            bnd_bytes = await boundaries.read()
-            bnd_path.write_bytes(bnd_bytes)
-        else:
-            if not DEFAULT_BOUNDARY.exists():
+    # Save or use default boundary file
+    if boundaries and boundaries.filename:
+        bnd_path = upload_dir / boundaries.filename
+        bnd_bytes = await boundaries.read()
+        bnd_path.write_bytes(bnd_bytes)
+    else:
+        if not DEFAULT_BOUNDARY.exists():
+            # Try hackathon directory as fallback
+            hackathon_bnd = Path(__file__).parent.parent / "hackathon" / "yas_marina_bnd.json"
+            if hackathon_bnd.exists():
+                bnd_path = hackathon_bnd
+            else:
                 raise HTTPException(400, "No boundary file uploaded and no default found")
+        else:
             bnd_path = DEFAULT_BOUNDARY
 
-        # Run pipeline
-        output_path = tmp_path / "session_summary.json"
-        try:
-            run_pipeline(
-                mcap_path=str(mcap_path),
-                boundary_path=str(bnd_path),
-                output_path=str(output_path),
-                driver_level=driver_level,
-                driver_profile=driver_profile,
-            )
-        except Exception as e:
-            logger.exception("Pipeline failed")
-            raise HTTPException(500, f"Pipeline error: {e}")
+    # Output paths - save viz_data to web/public for frontend access
+    viz_data_path = Path(__file__).parent.parent / "web" / "public" / "viz_data.json"
+    output_path = upload_dir / "session_summary.json"
 
-        # Read outputs
-        summary = json.loads(output_path.read_text())
+    # Run pipeline
+    try:
+        run_pipeline(
+            mcap_path=str(mcap_path),
+            boundary_path=str(bnd_path),
+            output_path=str(output_path),
+            driver_level=driver_level,
+            driver_profile=driver_profile,
+        )
+    except Exception as e:
+        logger.exception("Pipeline failed")
+        raise HTTPException(500, f"Pipeline error: {e}")
 
-        viz_path = tmp_path / "viz_data.json"
-        if not viz_path.exists():
-            raise HTTPException(500, "Pipeline did not produce viz_data.json")
-        viz_data = json.loads(viz_path.read_text())
+    # Read outputs
+    summary = json.loads(output_path.read_text())
+
+    # The pipeline saves viz_data alongside the output - copy to web/public
+    pipeline_viz_path = output_path.parent / "viz_data.json"
+    if pipeline_viz_path.exists():
+        viz_data = json.loads(pipeline_viz_path.read_text())
+        # Also save to web/public for frontend
+        viz_data_path.write_text(json.dumps(viz_data, indent=2))
+        logger.info(f"Updated viz_data at {viz_data_path}")
+    else:
+        raise HTTPException(500, "Pipeline did not produce viz_data.json")
 
     return JSONResponse({
         "viz_data": viz_data,
