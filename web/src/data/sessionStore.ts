@@ -16,7 +16,6 @@ interface SessionState {
   // Chat context for "Ask AI" feature
   askAIContext: AskAIContext | null;
   chatOpen: boolean;
-  loadFromFiles: (vizFile: File, summaryFile?: File) => Promise<void>;
   loadFromUrl: (vizUrl: string, summaryUrl?: string) => Promise<void>;
   loadFromMcap: (mcapFile: File, boundaryFile?: File) => Promise<void>;
   // Ask AI about a specific verdict
@@ -63,24 +62,6 @@ export const useSessionStore = create<SessionState>((set) => ({
   pipelineProgress: null,
   askAIContext: null,
   chatOpen: false,
-
-  loadFromFiles: async (vizFile, summaryFile) => {
-    set({ isLoading: true, error: null, pipelineProgress: null });
-    try {
-      const vizText = await vizFile.text();
-      const vizData = JSON.parse(vizText) as VizData;
-
-      let summary: SessionSummary | null = null;
-      if (summaryFile) {
-        const sumText = await summaryFile.text();
-        summary = JSON.parse(sumText) as SessionSummary;
-      }
-
-      set({ vizData, summary, isLoading: false });
-    } catch (e) {
-      set({ error: (e as Error).message, isLoading: false });
-    }
-  },
 
   loadFromUrl: async (vizUrl, summaryUrl) => {
     set({ isLoading: true, error: null, pipelineProgress: null });

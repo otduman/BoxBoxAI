@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
-  Upload,
   Gauge,
   FileJson,
   Loader2,
-  ArrowRight,
   HardDrive,
   Zap,
   BarChart3,
   MessageSquare,
+  Upload,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSessionStore } from "@/data/sessionStore";
@@ -18,7 +17,7 @@ interface DemoMeta { lapTime: string; issues: number; gain: string }
 
 const Index = () => {
   const navigate = useNavigate();
-  const { loadFromFiles, loadFromUrl, loadFromMcap, isLoading, pipelineProgress } =
+  const { loadFromUrl, loadFromMcap, isLoading, pipelineProgress } =
     useSessionStore();
   const [demoMeta, setDemoMeta] = useState<Record<"fast" | "good", DemoMeta>>({
     fast: { lapTime: "—:——.———", issues: 0, gain: "—" },
@@ -51,21 +50,11 @@ const Index = () => {
       } catch { /* ignore if files not present */ }
     });
   }, []);
-  const vizInputRef = useRef<HTMLInputElement>(null);
-  const sumInputRef = useRef<HTMLInputElement>(null);
+
   const mcapInputRef = useRef<HTMLInputElement>(null);
   const boundaryInputRef = useRef<HTMLInputElement>(null);
-  const [vizFile, setVizFile] = useState<File | null>(null);
-  const [sumFile, setSumFile] = useState<File | null>(null);
   const [mcapFile, setMcapFile] = useState<File | null>(null);
   const [boundaryFile, setBoundaryFile] = useState<File | null>(null);
-  const [uploadMode, setUploadMode] = useState<"mcap" | "json">("mcap");
-
-  const handleLoadFiles = useCallback(async () => {
-    if (!vizFile) return;
-    await loadFromFiles(vizFile, sumFile ?? undefined);
-    navigate("/analysis/live");
-  }, [vizFile, sumFile, loadFromFiles, navigate]);
 
   const handleLoadMcap = useCallback(async () => {
     if (!mcapFile) return;
@@ -88,15 +77,12 @@ const Index = () => {
       for (const f of files) {
         if (f.name.endsWith(".mcap")) {
           setMcapFile(f);
-          setUploadMode("mcap");
         } else if (f.name.includes("bnd") || f.name.includes("boundary")) {
           setBoundaryFile(f);
-        } else if (f.name.includes("viz")) setVizFile(f);
-        else if (f.name.includes("summary")) setSumFile(f);
-        else if (f.name.endsWith(".json") && !vizFile) setVizFile(f);
+        }
       }
     },
-    [vizFile]
+    []
   );
 
   return (
@@ -168,32 +154,6 @@ const Index = () => {
           ))}
         </div>
 
-        {/* Upload mode toggle */}
-        <div className="flex items-center justify-center gap-2">
-          <div className="flex bg-accent p-0.5 rounded-md border border-border">
-            <button
-              onClick={() => setUploadMode("mcap")}
-              className={`px-3 py-1.5 text-[10px] font-mono tracking-wider uppercase rounded-sm transition-all duration-200 ${
-                uploadMode === "mcap"
-                  ? "bg-background text-foreground shadow-sm font-bold"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              MCAP Telemetry
-            </button>
-            <button
-              onClick={() => setUploadMode("json")}
-              className={`px-3 py-1.5 text-[10px] font-mono tracking-wider uppercase rounded-sm transition-all duration-200 ${
-                uploadMode === "json"
-                  ? "bg-background text-foreground shadow-sm font-bold"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Pre-processed JSON
-            </button>
-          </div>
-        </div>
-
         {/* Upload dropzone */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -204,147 +164,81 @@ const Index = () => {
           className="glass-panel border-dashed border-2 border-border hover:border-muted-foreground/30 transition-colors p-8 flex flex-col items-center gap-4 cursor-pointer group"
         >
           <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center group-hover:bg-accent transition-colors">
-            {uploadMode === "mcap" ? (
-              <HardDrive className="w-5 h-5 text-muted-foreground" />
-            ) : (
-              <Upload className="w-5 h-5 text-muted-foreground" />
-            )}
+            <HardDrive className="w-5 h-5 text-muted-foreground" />
           </div>
 
-          {uploadMode === "mcap" ? (
-            <>
-              <div className="text-center">
-                <p className="text-sm font-semibold">Upload MCAP Telemetry</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Drop your .mcap file here — analysis runs server-side in ~15s
-                </p>
-              </div>
+          <div className="text-center">
+            <p className="text-sm font-semibold">Upload MCAP Telemetry</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Drop your .mcap file here — analysis runs server-side in ~15s
+            </p>
+          </div>
 
-              <div className="flex flex-col gap-2 mt-2">
-                <div className="flex gap-3">
-                  <input
-                    ref={mcapInputRef}
-                    type="file"
-                    accept=".mcap"
-                    className="hidden"
-                    onChange={(e) => setMcapFile(e.target.files?.[0] ?? null)}
-                  />
-                  <button
-                    onClick={() => mcapInputRef.current?.click()}
-                    className={`flex items-center gap-2 px-3 py-1.5 text-xs rounded border transition-colors ${
-                      mcapFile
-                        ? "border-sector-green/50 bg-sector-green/10 text-sector-green"
-                        : "border-border hover:bg-accent"
-                    }`}
-                  >
-                    <HardDrive className="w-3 h-3" />
-                    {mcapFile ? mcapFile.name : "Select .mcap file"}
-                  </button>
-                </div>
-                <div className="flex gap-3">
-                  <input
-                    ref={boundaryInputRef}
-                    type="file"
-                    accept=".json"
-                    className="hidden"
-                    onChange={(e) => setBoundaryFile(e.target.files?.[0] ?? null)}
-                  />
-                  <button
-                    onClick={() => boundaryInputRef.current?.click()}
-                    className={`flex items-center gap-2 px-3 py-1.5 text-xs rounded border transition-colors ${
-                      boundaryFile
-                        ? "border-sector-green/50 bg-sector-green/10 text-sector-green"
-                        : "border-border hover:bg-accent"
-                    }`}
-                  >
-                    <FileJson className="w-3 h-3" />
-                    {boundaryFile ? boundaryFile.name : "Track boundary (optional)"}
-                  </button>
-                </div>
-              </div>
+          <div className="flex flex-col gap-2 mt-2">
+            <div className="flex gap-3">
+              <input
+                ref={mcapInputRef}
+                type="file"
+                accept=".mcap"
+                className="hidden"
+                onChange={(e) => setMcapFile(e.target.files?.[0] ?? null)}
+              />
+              <button
+                onClick={() => mcapInputRef.current?.click()}
+                className={`flex items-center gap-2 px-3 py-1.5 text-xs rounded border transition-colors ${
+                  mcapFile
+                    ? "border-sector-green/50 bg-sector-green/10 text-sector-green"
+                    : "border-border hover:bg-accent"
+                }`}
+              >
+                <HardDrive className="w-3 h-3" />
+                {mcapFile ? mcapFile.name : "Select .mcap file"}
+              </button>
+            </div>
+            <div className="flex gap-3">
+              <input
+                ref={boundaryInputRef}
+                type="file"
+                accept=".json"
+                className="hidden"
+                onChange={(e) => setBoundaryFile(e.target.files?.[0] ?? null)}
+              />
+              <button
+                onClick={() => boundaryInputRef.current?.click()}
+                className={`flex items-center gap-2 px-3 py-1.5 text-xs rounded border transition-colors ${
+                  boundaryFile
+                    ? "border-sector-green/50 bg-sector-green/10 text-sector-green"
+                    : "border-border hover:bg-accent"
+                }`}
+              >
+                <FileJson className="w-3 h-3" />
+                {boundaryFile ? boundaryFile.name : "Track boundary (optional)"}
+              </button>
+            </div>
+          </div>
 
-              {mcapFile && (
-                <motion.button
-                  initial={{ opacity: 0, y: 5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  onClick={handleLoadMcap}
-                  disabled={isLoading}
-                  className="flex items-center gap-2 px-5 py-2 rounded-md bg-racing-red text-primary-foreground text-sm font-semibold hover:bg-racing-red/90 transition-colors disabled:opacity-50"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="text-xs">
-                        {pipelineProgress ?? "Processing..."}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="w-4 h-4" />
-                      Analyze Session
-                    </>
-                  )}
-                </motion.button>
-              )}
-            </>
-          ) : (
-            <>
-              <div className="text-center">
-                <p className="text-sm font-semibold">Upload Pre-processed Data</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Drop viz_data.json + session_summary.json here
-                </p>
-              </div>
-
-              <div className="flex gap-3 mt-2">
-                <input
-                  ref={vizInputRef}
-                  type="file"
-                  accept=".json"
-                  className="hidden"
-                  onChange={(e) => setVizFile(e.target.files?.[0] ?? null)}
-                />
-                <button
-                  onClick={() => vizInputRef.current?.click()}
-                  className="flex items-center gap-2 px-3 py-1.5 text-xs rounded border border-border hover:bg-accent transition-colors"
-                >
-                  <FileJson className="w-3 h-3" />
-                  {vizFile ? vizFile.name : "viz_data.json"}
-                </button>
-
-                <input
-                  ref={sumInputRef}
-                  type="file"
-                  accept=".json"
-                  className="hidden"
-                  onChange={(e) => setSumFile(e.target.files?.[0] ?? null)}
-                />
-                <button
-                  onClick={() => sumInputRef.current?.click()}
-                  className="flex items-center gap-2 px-3 py-1.5 text-xs rounded border border-border hover:bg-accent transition-colors"
-                >
-                  <FileJson className="w-3 h-3" />
-                  {sumFile ? sumFile.name : "session_summary.json"}
-                </button>
-              </div>
-
-              {vizFile && (
-                <motion.button
-                  initial={{ opacity: 0, y: 5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  onClick={handleLoadFiles}
-                  disabled={isLoading}
-                  className="flex items-center gap-2 px-5 py-2 rounded-md bg-racing-red text-primary-foreground text-sm font-semibold hover:bg-racing-red/90 transition-colors disabled:opacity-50"
-                >
-                  {isLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <ArrowRight className="w-4 h-4" />
-                  )}
+          {mcapFile && (
+            <motion.button
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              onClick={handleLoadMcap}
+              disabled={isLoading}
+              className="flex items-center gap-2 px-5 py-2 rounded-md bg-racing-red text-primary-foreground text-sm font-semibold hover:bg-racing-red/90 transition-colors disabled:opacity-50"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-xs">
+                    {pipelineProgress ?? "Processing..."}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Zap className="w-4 h-4" />
                   Analyze Session
-                </motion.button>
+                </>
               )}
-            </>
+            </motion.button>
           )}
         </motion.div>
 
