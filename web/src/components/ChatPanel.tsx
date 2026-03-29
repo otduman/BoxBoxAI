@@ -81,15 +81,15 @@ const SUGGESTED_QUESTIONS = [
 ];
 
 const ChatPanel = () => {
-  const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const pendingAskRef = useRef<string | null>(null);
 
-  const { summary } = useSessionStore();
+  const { summary, chatOpen, setChatOpen, askAIContext, clearAskContext } = useSessionStore();
 
   // Check if chat is available on mount
   useEffect(() => {
@@ -106,10 +106,19 @@ const ChatPanel = () => {
 
   // Focus input when chat opens
   useEffect(() => {
-    if (isOpen) {
+    if (chatOpen) {
       inputRef.current?.focus();
     }
-  }, [isOpen]);
+  }, [chatOpen]);
+
+  // Handle "Ask AI" context - auto-send question when context arrives
+  useEffect(() => {
+    if (askAIContext && !isLoading && pendingAskRef.current !== askAIContext.question) {
+      pendingAskRef.current = askAIContext.question;
+      clearAskContext();
+      sendMessage(askAIContext.question);
+    }
+  }, [askAIContext, isLoading]);
 
   const sendMessage = async (messageText: string) => {
     if (!messageText.trim() || isLoading) return;
@@ -169,14 +178,14 @@ const ChatPanel = () => {
     <>
       {/* Chat toggle button */}
       <AnimatePresence>
-        {!isOpen && (
+        {!chatOpen && (
           <motion.button
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => setIsOpen(true)}
+            onClick={() => setChatOpen(true)}
             className="fixed bottom-4 right-4 z-50 w-14 h-14 rounded-full bg-racing-red text-white shadow-lg flex items-center justify-center hover:bg-racing-red/90 transition-colors"
           >
             <MessageCircle className="w-6 h-6" />
@@ -186,7 +195,7 @@ const ChatPanel = () => {
 
       {/* Chat panel */}
       <AnimatePresence>
-        {isOpen && (
+        {chatOpen && (
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -208,7 +217,7 @@ const ChatPanel = () => {
                 </div>
               </div>
               <button
-                onClick={() => setIsOpen(false)}
+                onClick={() => setChatOpen(false)}
                 className="p-1.5 rounded-md hover:bg-accent transition-colors"
               >
                 <X className="w-4 h-4 text-muted-foreground" />

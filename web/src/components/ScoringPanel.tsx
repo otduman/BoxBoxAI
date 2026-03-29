@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
-import { ChevronDown, ChevronUp, Target, TrendingUp, AlertTriangle } from "lucide-react";
+import { ChevronDown, ChevronUp, Target, TrendingUp, AlertTriangle, MessageCircle } from "lucide-react";
 import { useState } from "react";
 import { Tooltip } from "./Tooltip";
+import { useSessionStore } from "@/data/sessionStore";
 
 interface SegmentScore {
   segment_id: string;
@@ -66,6 +67,7 @@ const componentLabels: Record<string, { label: string; term: string }> = {
 
 const ScoringPanel = ({ scoring, selectedLap = "all" }: ScoringPanelProps) => {
   const [expandedSegment, setExpandedSegment] = useState<string | null>(null);
+  const askAIAboutScore = useSessionStore((s) => s.askAIAboutScore);
 
   // Get the lap data to display
   const lapKey = selectedLap === "all" ? Object.keys(scoring.lap_scores)[0] : String(selectedLap);
@@ -299,6 +301,15 @@ const ScoringPanel = ({ scoring, selectedLap = "all" }: ScoringPanelProps) => {
                       )}
                     </div>
                   </div>
+
+                  {/* Ask AI button */}
+                  <button
+                    onClick={() => askAIAboutScore(seg.segment_id, seg.score, seg.main_issue, seg.components)}
+                    className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-md bg-racing-red/10 hover:bg-racing-red/20 text-racing-red text-[10px] uppercase tracking-wider font-medium transition-colors"
+                  >
+                    <MessageCircle className="w-3 h-3" />
+                    Ask AI: How to improve?
+                  </button>
                 </motion.div>
               )}
             </div>

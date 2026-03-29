@@ -120,7 +120,7 @@ const VerdictCard = ({ marker, index, isActive, onClick, showLapBadge }: Verdict
           <AutoTooltip text={marker.finding} />
         </p>
 
-        {/* Severity + expand toggle + video button */}
+        {/* Severity + Video + expand toggle */}
         <div className="flex items-center justify-between pl-5">
           <span
             className={`text-[10px] uppercase tracking-[0.15em] font-semibold ${sev.text}`}
