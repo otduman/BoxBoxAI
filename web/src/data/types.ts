@@ -74,6 +74,25 @@ export interface SessionSummary {
     top_3_actions: string[];
     verdicts: Verdict[];
   };
+  scoring?: {
+    lap_scores: Record<string, {
+      lap_score: number;
+      segment_scores: Array<{
+        segment_id: string;
+        segment_type: "corner" | "straight";
+        score: number;
+        quality: "optimal" | "good" | "average" | "poor";
+        main_issue: string;
+        main_issue_score: number;
+        components: Record<string, number>;
+        features: Record<string, number | boolean>;
+      }>;
+    }>;
+    track_reference?: {
+      theoretical_best_s: number;
+      best_lap_time_s: number;
+    };
+  };
 }
 
 export interface LapAnalysis {

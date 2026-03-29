@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
-  Gauge,
   FileJson,
   Loader2,
   HardDrive,
@@ -88,18 +87,12 @@ const Index = () => {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <header className="border-b border-border px-6 py-4 flex items-center gap-3">
-        <div className="w-8 h-8 rounded bg-racing-red flex items-center justify-center">
-          <Gauge className="w-4 h-4 text-primary-foreground" />
-        </div>
-        <div>
-          <h1 className="text-lg font-bold tracking-wide leading-none">
-            Pocket Race Engineer
-          </h1>
-          <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-            AI-Powered Telemetry Analysis
-          </p>
-        </div>
+      <header className="border-b border-border px-6 py-4 flex items-center">
+        <img
+          src="/logo.png"
+          alt="BoxBox AI"
+          className="h-10 object-contain"
+        />
       </header>
 
       <main className="max-w-3xl mx-auto px-6 py-10 space-y-10">
@@ -174,47 +167,44 @@ const Index = () => {
             </p>
           </div>
 
-          <div className="flex flex-col gap-2 mt-2">
-            <div className="flex gap-3">
-              <input
-                ref={mcapInputRef}
-                type="file"
-                accept=".mcap"
-                className="hidden"
-                onChange={(e) => setMcapFile(e.target.files?.[0] ?? null)}
-              />
-              <button
-                onClick={() => mcapInputRef.current?.click()}
-                className={`flex items-center gap-2 px-3 py-1.5 text-xs rounded border transition-colors ${
-                  mcapFile
-                    ? "border-sector-green/50 bg-sector-green/10 text-sector-green"
-                    : "border-border hover:bg-accent"
-                }`}
-              >
-                <HardDrive className="w-3 h-3" />
-                {mcapFile ? mcapFile.name : "Select .mcap file"}
-              </button>
-            </div>
-            <div className="flex gap-3">
-              <input
-                ref={boundaryInputRef}
-                type="file"
-                accept=".json"
-                className="hidden"
-                onChange={(e) => setBoundaryFile(e.target.files?.[0] ?? null)}
-              />
-              <button
-                onClick={() => boundaryInputRef.current?.click()}
-                className={`flex items-center gap-2 px-3 py-1.5 text-xs rounded border transition-colors ${
-                  boundaryFile
-                    ? "border-sector-green/50 bg-sector-green/10 text-sector-green"
-                    : "border-border hover:bg-accent"
-                }`}
-              >
-                <FileJson className="w-3 h-3" />
-                {boundaryFile ? boundaryFile.name : "Track boundary (optional)"}
-              </button>
-            </div>
+          <div className="flex flex-col gap-3 mt-4 w-full max-w-sm">
+            <input
+              ref={mcapInputRef}
+              type="file"
+              accept=".mcap"
+              className="hidden"
+              onChange={(e) => setMcapFile(e.target.files?.[0] ?? null)}
+            />
+            <button
+              onClick={() => mcapInputRef.current?.click()}
+              className={`w-full flex items-center justify-center gap-3 px-6 py-4 text-sm font-medium rounded-lg border-2 transition-all ${
+                mcapFile
+                  ? "border-sector-green bg-sector-green/10 text-sector-green"
+                  : "border-dashed border-muted-foreground/30 hover:border-racing-red/50 hover:bg-racing-red/5"
+              }`}
+            >
+              <HardDrive className="w-5 h-5" />
+              <span className="truncate">{mcapFile ? mcapFile.name : "Select MCAP telemetry file"}</span>
+            </button>
+
+            <input
+              ref={boundaryInputRef}
+              type="file"
+              accept=".json"
+              className="hidden"
+              onChange={(e) => setBoundaryFile(e.target.files?.[0] ?? null)}
+            />
+            <button
+              onClick={() => boundaryInputRef.current?.click()}
+              className={`w-full flex items-center justify-center gap-3 px-6 py-3 text-sm rounded-lg border transition-all ${
+                boundaryFile
+                  ? "border-sector-green bg-sector-green/10 text-sector-green"
+                  : "border-border text-muted-foreground hover:border-muted-foreground/50 hover:bg-accent"
+              }`}
+            >
+              <FileJson className="w-4 h-4" />
+              <span className="truncate">{boundaryFile ? boundaryFile.name : "Track boundary (optional)"}</span>
+            </button>
           </div>
 
           {mcapFile && (

@@ -198,7 +198,7 @@ const ChatPanel = () => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setChatOpen(true)}
-            className="fixed bottom-4 right-4 z-50 w-14 h-14 rounded-full bg-racing-red text-white shadow-lg flex items-center justify-center hover:bg-racing-red/90 transition-colors"
+            className="fixed bottom-4 right-[440px] z-50 w-14 h-14 rounded-full bg-racing-red text-white shadow-lg flex items-center justify-center hover:bg-racing-red/90 transition-colors max-md:right-4"
           >
             <MessageCircle className="w-6 h-6" />
           </motion.button>
@@ -213,7 +213,7 @@ const ChatPanel = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-4 right-4 z-50 w-[380px] h-[500px] bg-background border border-border rounded-xl shadow-2xl flex flex-col overflow-hidden"
+            className="fixed bottom-4 right-[440px] z-50 w-[380px] h-[500px] bg-background border border-border rounded-xl shadow-2xl flex flex-col overflow-hidden max-md:right-4"
           >
             {/* Header */}
             <div className="px-4 py-3 border-b border-border flex items-center justify-between bg-accent/50">

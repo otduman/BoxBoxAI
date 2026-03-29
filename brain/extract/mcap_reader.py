@@ -52,10 +52,10 @@ def read_mcap(
 
     with open(mcap_path, "rb") as f:
         try:
-            #TODO: if make reader fails then make sure to stop, so it does not iterate the user
             reader = make_reader(f, decoder_factories=[decoder])
         except Exception as e:
             logger.error(f"Failed to open MCAP file: {mcap_path}")
+            raise
 
         for schema, channel, message, decoded_msg in reader.iter_decoded_messages(
             topics=list(wanted_topics)

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Gauge, Loader2, ChevronDown, X } from "lucide-react";
+import { ArrowLeft, Loader2, ChevronDown, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Track3D from "@/components/Track3D";
 import VerdictCard from "@/components/VerdictCard";
@@ -131,46 +131,33 @@ const Analysis = () => {
           >
             <ArrowLeft className="w-4 h-4 text-muted-foreground" />
           </button>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="w-6 h-6 rounded bg-racing-red flex items-center justify-center">
-              <Gauge className="w-3 h-3 text-primary-foreground" />
+          <img
+            src="/logo.png"
+            alt="BoxBox AI"
+            className="h-8 object-contain"
+          />
+          {/* Lap selector (only for multi-lap sessions) */}
+          {isMultiLap && (
+            <div className="relative ml-4">
+              <select
+                value={selectedLap}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setSelectedLap(v === "all" ? "all" : Number(v));
+                  setActiveIdx(null);
+                }}
+                className="appearance-none bg-accent border border-border rounded-md px-3 pr-7 py-1 sm:py-1.5 text-[10px] font-mono tracking-wider uppercase cursor-pointer hover:bg-accent/80 transition-colors"
+              >
+                <option value="all">All Laps</option>
+                {lapNumbers.map((ln) => (
+                  <option key={ln} value={ln}>
+                    Lap {ln + 1}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-3 h-3 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground" />
             </div>
-            <div className="flex items-center gap-3 sm:gap-6">
-              <div>
-                <p className="text-[10px] text-muted-foreground leading-none">Track</p>
-                <p className="text-xs sm:text-sm font-semibold tracking-wide">{trackName}</p>
-              </div>
-              <div className="hidden sm:block">
-                <p className="text-[10px] text-muted-foreground leading-none">Laps</p>
-                <p className="text-sm font-semibold tracking-wide">
-                  {summary?.session?.total_laps ?? "-"}
-                </p>
-              </div>
-
-{/* Lap selector (only for multi-lap sessions) */}
-              {isMultiLap && (
-                <div className="relative">
-                  <select
-                    value={selectedLap}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setSelectedLap(v === "all" ? "all" : Number(v));
-                      setActiveIdx(null);
-                    }}
-                    className="appearance-none bg-accent border border-border rounded-md px-3 pr-7 py-1 sm:py-1.5 text-[10px] font-mono tracking-wider uppercase cursor-pointer hover:bg-accent/80 transition-colors"
-                  >
-                    <option value="all">All Laps</option>
-                    {lapNumbers.map((ln) => (
-                      <option key={ln} value={ln}>
-                        Lap {ln + 1}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-3 h-3 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground" />
-                </div>
-              )}
-            </div>
-          </div>
+          )}
         </div>
 
         <div className="flex items-center gap-3 sm:gap-5">
