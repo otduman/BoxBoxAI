@@ -89,6 +89,7 @@ async def analyze(
 
     # Output paths - save viz_data to web/public for frontend access
     viz_data_path = Path(__file__).parent.parent / "web" / "public" / "viz_data.json"
+    viz_data_path.parent.mkdir(parents=True, exist_ok=True)
     output_path = upload_dir / "session_summary.json"
 
     # Run pipeline
