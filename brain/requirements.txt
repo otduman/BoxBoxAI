@@ -1,5 +1,14 @@
-mcap>=1.1
-mcap-ros2-support>=0.5
-pandas>=2.0
-numpy>=1.24
-scipy>=1.10
+# Python 3.14+ required
+# IMPORTANT: Set GEMINI_API_KEY environment variable for chat service to work
+mcap>=1.3.1
+mcap-ros2-support>=0.5.0
+pandas>=3.0.1
+numpy>=2.4.3
+scipy>=1.17.1
+# FastAPI server and web framework
+fastapi>=0.109.0
+uvicorn>=0.27.0
+pydantic>=2.6.0
+# AI Coach - requires GEMINI_API_KEY
+google-genai>=0.5.0
+python-dotenv>=1.0.0
