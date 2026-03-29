@@ -21,6 +21,8 @@ from brain.physics.tire_analyzer import analyze_tires, analyze_tire_degradation
 from brain.physics.brake_analyzer import analyze_brakes
 from brain.physics.consistency import analyze_consistency, compare_laps
 from brain.physics.coaching_rules import compute_all_verdicts, verdicts_to_dict
+from brain.physics.scoring import score_lap, segment_score_to_dict
+from brain.physics.reference_builder import build_track_reference, reference_to_dict
 from brain.output.json_builder import build_session_summary, save_session_summary
 from brain.output.llm_prompt import build_coaching_prompt
 from brain.output.track_viz import export_viz_json
@@ -181,9 +183,50 @@ def run_pipeline(
     )
     t_verdicts = time.perf_counter()
 
+    # --- Step 5c: ML-like segment scoring ---
+    logger.info("Step 5c: Computing ML-like segment scores...")
+
+    # Build track reference from all laps (optimal values per segment)
+    track_name = Path(boundary_path).stem.replace("_bnd", "").replace("_", " ").title()
+    lap_times_dict = {lap.lap_number: lap.duration_s for lap in laps}
+    track_reference = build_track_reference(
+        corner_analyses=corner_analyses,
+        straight_analyses=straight_analyses,
+        lap_times=lap_times_dict,
+        track_name=track_name,
+    )
+
+    # Score each lap against the reference
+    lap_scores = {}
+    for lap in laps:
+        ln = lap.lap_number
+        corners = corner_analyses.get(ln, [])
+        straights = straight_analyses.get(ln, [])
+
+        # Use fastest lap as reference for scoring
+        ref_corners_list = None
+        ref_straights_list = None
+        if ref_corners:
+            ref_corners_list = ref_corners
+        if len(laps) >= 2:
+            fastest = min(laps, key=lambda l: l.duration_s)
+            ref_straights_list = straight_analyses.get(fastest.lap_number)
+
+        lap_score, segment_scores = score_lap(
+            corners, straights,
+            ref_corners_list, ref_straights_list
+        )
+        lap_scores[ln] = {
+            "lap_score": lap_score,
+            "segment_scores": [segment_score_to_dict(s) for s in segment_scores],
+        }
+        logger.info(f"  Lap {ln} score: {lap_score:.3f}")
+
+    t_scoring = time.perf_counter()
+    logger.info(f"  ML-like scoring: {t_scoring - t_verdicts:.1f}s")
+
     # --- Step 6: Build output ---
     logger.info("Step 6/7: Building session summary...")
-    track_name = Path(boundary_path).stem.replace("_bnd", "").replace("_", " ").title()
     summary = build_session_summary(
         laps=laps,
         segments=segments,
@@ -200,6 +243,12 @@ def run_pipeline(
 
     # Inject deterministic verdicts into the summary
     summary["deterministic_coaching"] = verdicts_to_dict(coaching_verdicts)
+
+    # Inject ML-like scoring into the summary
+    summary["scoring"] = {
+        "track_reference": reference_to_dict(track_reference),
+        "lap_scores": lap_scores,
+    }
 
     save_session_summary(summary, output_path, master_df=master)
 

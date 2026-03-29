@@ -6,6 +6,8 @@ import Track3D from "@/components/Track3D";
 import VerdictCard from "@/components/VerdictCard";
 import DynamicsPanel from "@/components/DynamicsPanel";
 import CoachPanel from "@/components/CoachPanel";
+import ChatPanel from "@/components/ChatPanel";
+import ScoringPanel from "@/components/ScoringPanel";
 import { useSessionStore } from "@/data/sessionStore";
 
 const Analysis = () => {
@@ -262,6 +264,15 @@ const Analysis = () => {
             })()}
 
             {summary && <CoachPanel summary={summary} />}
+
+            {/* ML-like Performance Scoring */}
+            {summary?.scoring && (
+              <ScoringPanel
+                scoring={summary.scoring}
+                selectedLap={selectedLap}
+              />
+            )}
+
             {activeLapData && <DynamicsPanel lap={activeLapData} />}
 
             {/* Consistency summary (multi-lap) */}
@@ -309,6 +320,9 @@ const Analysis = () => {
             </div>
           </div>
         </motion.aside>
+
+        {/* Chat Panel - floating button + chat window */}
+        <ChatPanel />
       </div>
     </div>
   );

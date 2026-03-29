@@ -2,6 +2,8 @@
 FastAPI server: accepts MCAP + boundary file uploads, runs the pipeline,
 and returns viz_data + session_summary as JSON.
 
+Also provides a chat endpoint for conversational coaching.
+
 Usage:
     uvicorn brain.server:app --reload --port 8000
 """
@@ -13,9 +15,11 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
+from pydantic import BaseModel
 
 from brain.main import run_pipeline
+from brain.chat_service import get_chat_service
 
 logging.basicConfig(
     level=logging.INFO,
@@ -100,3 +104,81 @@ async def analyze(
 @app.get("/api/health")
 async def health():
     return {"status": "ok"}
+
+
+# ---------------------------------------------------------------------------
+# Chat API
+# ---------------------------------------------------------------------------
+
+class ChatMessage(BaseModel):
+    """A single chat message."""
+    role: str  # "user" or "assistant"
+    content: str
+
+
+class ChatRequest(BaseModel):
+    """Request body for chat endpoint."""
+    message: str
+    session_summary: dict | None = None
+    conversation_history: list[ChatMessage] | None = None
+    stream: bool = False
+
+
+@app.post("/api/chat")
+async def chat(request: ChatRequest):
+    """
+    Chat with the racing coach AI.
+
+    The AI is strictly limited to racing/coaching topics only.
+    Provide session_summary for context-aware responses.
+    """
+    chat_service = get_chat_service()
+
+    if not chat_service.is_available():
+        raise HTTPException(
+            503,
+            "Chat service unavailable. GEMINI_API_KEY not configured."
+        )
+
+    # Convert history to dict format
+    history = None
+    if request.conversation_history:
+        history = [{"role": m.role, "content": m.content} for m in request.conversation_history]
+
+    if request.stream:
+        # Stream response
+        def generate():
+            for chunk in chat_service.chat_stream(
+                message=request.message,
+                session_summary=request.session_summary,
+                conversation_history=history,
+            ):
+                yield f"data: {json.dumps({'chunk': chunk})}\n\n"
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            generate(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+            }
+        )
+    else:
+        # Non-streaming response
+        response = chat_service.chat(
+            message=request.message,
+            session_summary=request.session_summary,
+            conversation_history=history,
+        )
+        return JSONResponse({"response": response})
+
+
+@app.get("/api/chat/status")
+async def chat_status():
+    """Check if chat service is available."""
+    chat_service = get_chat_service()
+    return {
+        "available": chat_service.is_available(),
+        "message": "Ready" if chat_service.is_available() else "GEMINI_API_KEY not set"
+    }
