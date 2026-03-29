@@ -11,7 +11,6 @@ import logging
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 
 from brain.track.segmentation import TrackSegment
 from brain.physics.lap_splitter import Lap
@@ -143,17 +142,12 @@ def build_session_summary(
     return summary
 
 
-def save_session_summary(summary: dict, output_path: str | Path, master_df: pd.DataFrame = None) -> None:
-    """Write session summary to JSON file and raw data to CSV."""
+def save_session_summary(summary: dict, output_path: str | Path) -> None:
+    """Write session summary to JSON file."""
     output_path = Path(output_path)
     with open(output_path, "w") as f:
         json.dump(summary, f, indent=2, cls=_NumpyEncoder)
     logger.info(f"Session summary saved to {output_path}")
-
-    if master_df is not None:
-        csv_path = output_path.with_suffix(".csv")
-        master_df.to_csv(csv_path, index=False)
-        logger.info(f"Raw telemetry saved to {csv_path}")
 
 
 def _serialize_lap(lap: Lap) -> dict:

@@ -20,7 +20,7 @@ from pydantic import BaseModel
 
 from brain.main import run_pipeline
 from brain.chat_service import get_chat_service
-from brain.video import extract_frame_at_timestamp, get_available_cameras
+from brain.video import extract_frame_at_timestamp, extract_frames_around_timestamp, get_available_cameras
 
 logging.basicConfig(
     level=logging.INFO,
@@ -252,6 +252,71 @@ async def get_frame(timestamp: float, camera: str | None = None):
         "camera": frame.camera,
         "format": frame.format,
         "data_url": frame.to_data_url(),
+    })
+
+
+@app.get("/api/frames")
+async def get_frames(
+    timestamp: float,
+    num_frames: int = 5,
+    span_s: float = 2.0,
+    camera: str | None = None,
+    mcap_file: str | None = None,
+):
+    """
+    Extract multiple frames around a timestamp for a video snippet carousel.
+
+    Args:
+        timestamp: Center timestamp in seconds
+        num_frames: Number of frames to extract (default 5)
+        span_s: Total time span in seconds (default 2.0s = ±1s around center)
+        camera: Camera topic (optional, auto-detects if not provided)
+        mcap_file: Specific MCAP filename to use (for demo mode)
+
+    Returns:
+        JSON with list of frame data URLs
+    """
+    global _uploaded_mcap_path
+
+    mcap_path = _uploaded_mcap_path
+
+    # If specific mcap_file requested (demo mode), try hackathon directory
+    if mcap_file:
+        specific_mcap = Path(__file__).parent.parent / "hackathon" / mcap_file
+        if specific_mcap.exists():
+            mcap_path = specific_mcap
+
+    if mcap_path is None or not mcap_path.exists():
+        default_mcap = Path(__file__).parent.parent / "hackathon" / "hackathon_fast_laps.mcap"
+        if default_mcap.exists():
+            mcap_path = default_mcap
+        else:
+            raise HTTPException(404, "No MCAP file available. Upload one first.")
+
+    frames = extract_frames_around_timestamp(
+        mcap_path=mcap_path,
+        target_time_s=timestamp,
+        camera_topic=camera,
+        num_frames=num_frames,
+        span_s=span_s,
+    )
+
+    if not frames:
+        raise HTTPException(404, f"No frames found near timestamp {timestamp}s")
+
+    return JSONResponse({
+        "center_timestamp_s": timestamp,
+        "num_frames": len(frames),
+        "span_s": span_s,
+        "frames": [
+            {
+                "timestamp_ns": f.timestamp_ns,
+                "camera": f.camera,
+                "format": f.format,
+                "data_url": f.to_data_url(),
+            }
+            for f in frames
+        ],
     })
 
 

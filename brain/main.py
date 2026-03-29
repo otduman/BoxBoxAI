@@ -250,7 +250,7 @@ def run_pipeline(
         "lap_scores": lap_scores,
     }
 
-    save_session_summary(summary, output_path, master_df=master)
+    save_session_summary(summary, output_path)
 
     # --- Step 7: Build LLM prompt (explains verdicts, does not generate them) ---
     logger.info("Step 7/7: Building LLM prompt...")
@@ -289,7 +289,9 @@ def run_pipeline(
     viz_suffix = out_stem.replace("session_summary", "viz_data") if "session_summary" in out_stem else "viz_data"
     viz_path = Path(output_path).with_name(f"{viz_suffix}.json")
     car_xy = master[["x_m", "y_m"]].values if "x_m" in master.columns else None
-    export_viz_json(track, segments, coaching_verdicts, str(viz_path), car_xy=car_xy)
+    # Include MCAP filename for video extraction in frontend
+    mcap_filename = Path(mcap_path).name
+    export_viz_json(track, segments, coaching_verdicts, str(viz_path), car_xy=car_xy, mcap_file=mcap_filename)
 
     t_total = time.perf_counter() - t_start
     logger.info(f"Pipeline complete in {t_total:.1f}s")

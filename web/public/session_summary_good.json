@@ -1292,7 +1292,8 @@
         "measured": 9.376,
         "target": 25.0,
         "unit": "percent",
-        "vs_reference": false
+        "vs_reference": false,
+        "timestamp_s": 1763219626.17
       },
       {
         "category": "straight",
@@ -1306,7 +1307,8 @@
         "measured": 75.0,
         "target": 89.04,
         "unit": "percent",
-        "vs_reference": false
+        "vs_reference": false,
+        "timestamp_s": 1763219651.53
       },
       {
         "category": "straight",
@@ -1320,7 +1322,8 @@
         "measured": 75.641,
         "target": 84.091,
         "unit": "percent",
-        "vs_reference": false
+        "vs_reference": false,
+        "timestamp_s": 1763219628.33
       },
       {
         "category": "exit",
@@ -1334,7 +1337,8 @@
         "measured": 1.0,
         "target": 0.0,
         "unit": "wheelspin_present",
-        "vs_reference": false
+        "vs_reference": false,
+        "timestamp_s": 1763219684.69
       },
       {
         "category": "trail_brake",
@@ -1348,8 +1352,573 @@
         "measured": 0.761,
         "target": 0.85,
         "unit": "R_squared",
-        "vs_reference": false
+        "vs_reference": false,
+        "timestamp_s": 1763219639.87
       }
     ]
+  },
+  "scoring": {
+    "track_reference": {
+      "track_name": "Yas Marina",
+      "total_laps_analyzed": 1,
+      "theoretical_best_s": 65.978,
+      "best_lap_time_s": 81.259,
+      "best_lap_number": 0,
+      "segments": {
+        "Turn_1": {
+          "segment_type": "corner",
+          "best_time_s": 2.7,
+          "best_lap": 0,
+          "optimal_entry_speed_kmh": 143.9,
+          "optimal_exit_speed_kmh": 147.7,
+          "optimal_apex_speed_kmh": 143.4,
+          "optimal_brake_point_m": 0.0,
+          "optimal_top_speed_kmh": 0.0
+        },
+        "Turn_2": {
+          "segment_type": "corner",
+          "best_time_s": 10.2,
+          "best_lap": 0,
+          "optimal_entry_speed_kmh": 195.9,
+          "optimal_exit_speed_kmh": 147.3,
+          "optimal_apex_speed_kmh": 55.8,
+          "optimal_brake_point_m": 3172.8,
+          "optimal_top_speed_kmh": 0.0
+        },
+        "Turn_3": {
+          "segment_type": "corner",
+          "best_time_s": 9.161,
+          "best_lap": 0,
+          "optimal_entry_speed_kmh": 185.9,
+          "optimal_exit_speed_kmh": 90.1,
+          "optimal_apex_speed_kmh": 46.7,
+          "optimal_brake_point_m": 4280.2,
+          "optimal_top_speed_kmh": 0.0
+        },
+        "Turn_4": {
+          "segment_type": "corner",
+          "best_time_s": 0.321,
+          "best_lap": 0,
+          "optimal_entry_speed_kmh": 106.9,
+          "optimal_exit_speed_kmh": 152.4,
+          "optimal_apex_speed_kmh": 105.8,
+          "optimal_brake_point_m": 0.0,
+          "optimal_top_speed_kmh": 0.0
+        },
+        "Turn_5": {
+          "segment_type": "corner",
+          "best_time_s": 1.98,
+          "best_lap": 0,
+          "optimal_entry_speed_kmh": 112.1,
+          "optimal_exit_speed_kmh": 154.4,
+          "optimal_apex_speed_kmh": 112.1,
+          "optimal_brake_point_m": 0.0,
+          "optimal_top_speed_kmh": 0.0
+        },
+        "Turn_6": {
+          "segment_type": "corner",
+          "best_time_s": 1.498,
+          "best_lap": 0,
+          "optimal_entry_speed_kmh": 190.9,
+          "optimal_exit_speed_kmh": 114.7,
+          "optimal_apex_speed_kmh": 124.2,
+          "optimal_brake_point_m": 2251.8,
+          "optimal_top_speed_kmh": 0.0
+        },
+        "Turn_7": {
+          "segment_type": "corner",
+          "best_time_s": 3.64,
+          "best_lap": 0,
+          "optimal_entry_speed_kmh": 91.6,
+          "optimal_exit_speed_kmh": 162.0,
+          "optimal_apex_speed_kmh": 91.6,
+          "optimal_brake_point_m": 2493.5,
+          "optimal_top_speed_kmh": 0.0
+        },
+        "Straight_1": {
+          "segment_type": "straight",
+          "best_time_s": 1.94,
+          "best_lap": 0,
+          "optimal_entry_speed_kmh": 138.5,
+          "optimal_exit_speed_kmh": 0.0,
+          "optimal_apex_speed_kmh": 0.0,
+          "optimal_brake_point_m": 0.0,
+          "optimal_top_speed_kmh": 150.5
+        },
+        "Straight_2": {
+          "segment_type": "straight",
+          "best_time_s": 7.34,
+          "best_lap": 0,
+          "optimal_entry_speed_kmh": 148.2,
+          "optimal_exit_speed_kmh": 0.0,
+          "optimal_apex_speed_kmh": 0.0,
+          "optimal_brake_point_m": 0.0,
+          "optimal_top_speed_kmh": 217.4
+        },
+        "Straight_3": {
+          "segment_type": "straight",
+          "best_time_s": 15.56,
+          "best_lap": 0,
+          "optimal_entry_speed_kmh": 147.7,
+          "optimal_exit_speed_kmh": 0.0,
+          "optimal_apex_speed_kmh": 0.0,
+          "optimal_brake_point_m": 0.0,
+          "optimal_top_speed_kmh": 246.1
+        },
+        "Straight_4": {
+          "segment_type": "straight",
+          "best_time_s": 6.22,
+          "best_lap": 0,
+          "optimal_entry_speed_kmh": 141.6,
+          "optimal_exit_speed_kmh": 0.0,
+          "optimal_apex_speed_kmh": 0.0,
+          "optimal_brake_point_m": 0.0,
+          "optimal_top_speed_kmh": 208.6
+        },
+        "Straight_5": {
+          "segment_type": "straight",
+          "best_time_s": 3.759,
+          "best_lap": 0,
+          "optimal_entry_speed_kmh": 123.2,
+          "optimal_exit_speed_kmh": 0.0,
+          "optimal_apex_speed_kmh": 0.0,
+          "optimal_brake_point_m": 0.0,
+          "optimal_top_speed_kmh": 123.2
+        },
+        "Straight_6": {
+          "segment_type": "straight",
+          "best_time_s": 1.659,
+          "best_lap": 0,
+          "optimal_entry_speed_kmh": 162.1,
+          "optimal_exit_speed_kmh": 0.0,
+          "optimal_apex_speed_kmh": 0.0,
+          "optimal_brake_point_m": 0.0,
+          "optimal_top_speed_kmh": 162.2
+        }
+      }
+    },
+    "lap_scores": {
+      "0": {
+        "lap_score": 0.9,
+        "segment_scores": [
+          {
+            "segment_id": "Turn_1",
+            "segment_type": "corner",
+            "lap_number": 0,
+            "score": 0.915,
+            "quality": "optimal",
+            "main_issue": "braking_intensity",
+            "main_issue_score": 0.0,
+            "components": {
+              "entry_speed": 1.0,
+              "apex_speed": 1.0,
+              "exit_speed": 1.0,
+              "brake_point": 1.0,
+              "braking_intensity": 0.0,
+              "brake_release": 1.0,
+              "trail_brake": 1.0,
+              "throttle_point": 1.0,
+              "traction_control": 1.0,
+              "line": 0.888,
+              "lateral_g_utilization": 0.627
+            },
+            "features": {
+              "entry_speed_kmh": 143.867,
+              "apex_speed_kmh": 143.425,
+              "exit_speed_kmh": 147.74,
+              "brake_point_m": 0.0,
+              "deceleration_g": 0.0,
+              "coast_time_s": 0.0,
+              "trail_brake_r2": 0.0,
+              "throttle_gap_m": 0.0,
+              "rear_wheelspin": false,
+              "lateral_offset_m": -0.223,
+              "max_lateral_g": 1.253,
+              "time_in_corner_s": 2.7,
+              "requires_braking": false,
+              "vehicle_class": "gt3"
+            }
+          },
+          {
+            "segment_id": "Turn_2",
+            "segment_type": "corner",
+            "lap_number": 0,
+            "score": 0.941,
+            "quality": "optimal",
+            "main_issue": "lateral_g_utilization",
+            "main_issue_score": 0.415,
+            "components": {
+              "entry_speed": 1.0,
+              "apex_speed": 1.0,
+              "exit_speed": 1.0,
+              "brake_point": 1.0,
+              "braking_intensity": 0.689,
+              "brake_release": 1.0,
+              "trail_brake": 1.0,
+              "throttle_point": 1.0,
+              "traction_control": 1.0,
+              "line": 0.964,
+              "lateral_g_utilization": 0.415
+            },
+            "features": {
+              "entry_speed_kmh": 195.901,
+              "apex_speed_kmh": 55.775,
+              "exit_speed_kmh": 147.267,
+              "brake_point_m": 3172.843,
+              "deceleration_g": 1.516,
+              "coast_time_s": 0.0,
+              "trail_brake_r2": 0.961,
+              "throttle_gap_m": 0.0,
+              "rear_wheelspin": false,
+              "lateral_offset_m": 0.072,
+              "max_lateral_g": 0.83,
+              "time_in_corner_s": 10.2,
+              "requires_braking": true,
+              "vehicle_class": "gt3"
+            }
+          },
+          {
+            "segment_id": "Turn_3",
+            "segment_type": "corner",
+            "lap_number": 0,
+            "score": 0.926,
+            "quality": "optimal",
+            "main_issue": "lateral_g_utilization",
+            "main_issue_score": 0.454,
+            "components": {
+              "entry_speed": 1.0,
+              "apex_speed": 1.0,
+              "exit_speed": 1.0,
+              "brake_point": 1.0,
+              "braking_intensity": 0.759,
+              "brake_release": 1.0,
+              "trail_brake": 1.0,
+              "throttle_point": 1.0,
+              "traction_control": 0.575,
+              "line": 0.974,
+              "lateral_g_utilization": 0.454
+            },
+            "features": {
+              "entry_speed_kmh": 185.856,
+              "apex_speed_kmh": 46.723,
+              "exit_speed_kmh": 90.129,
+              "brake_point_m": 4280.231,
+              "deceleration_g": 1.669,
+              "coast_time_s": 0.0,
+              "trail_brake_r2": 0.906,
+              "throttle_gap_m": 0.0,
+              "rear_wheelspin": true,
+              "lateral_offset_m": 0.052,
+              "max_lateral_g": 0.909,
+              "time_in_corner_s": 9.161,
+              "requires_braking": true,
+              "vehicle_class": "gt3"
+            }
+          },
+          {
+            "segment_id": "Turn_4",
+            "segment_type": "corner",
+            "lap_number": 0,
+            "score": 0.908,
+            "quality": "optimal",
+            "main_issue": "braking_intensity",
+            "main_issue_score": 0.0,
+            "components": {
+              "entry_speed": 1.0,
+              "apex_speed": 1.0,
+              "exit_speed": 1.0,
+              "brake_point": 1.0,
+              "braking_intensity": 0.0,
+              "brake_release": 1.0,
+              "trail_brake": 1.0,
+              "throttle_point": 1.0,
+              "traction_control": 1.0,
+              "line": 0.909,
+              "lateral_g_utilization": 0.51
+            },
+            "features": {
+              "entry_speed_kmh": 106.874,
+              "apex_speed_kmh": 105.804,
+              "exit_speed_kmh": 152.428,
+              "brake_point_m": 0.0,
+              "deceleration_g": 0.0,
+              "coast_time_s": 0.0,
+              "trail_brake_r2": 0.0,
+              "throttle_gap_m": 0.0,
+              "rear_wheelspin": false,
+              "lateral_offset_m": -0.182,
+              "max_lateral_g": 1.019,
+              "time_in_corner_s": 0.321,
+              "requires_braking": false,
+              "vehicle_class": "gt3"
+            }
+          },
+          {
+            "segment_id": "Turn_5",
+            "segment_type": "corner",
+            "lap_number": 0,
+            "score": 0.913,
+            "quality": "optimal",
+            "main_issue": "braking_intensity",
+            "main_issue_score": 0.0,
+            "components": {
+              "entry_speed": 1.0,
+              "apex_speed": 1.0,
+              "exit_speed": 1.0,
+              "brake_point": 1.0,
+              "braking_intensity": 0.0,
+              "brake_release": 1.0,
+              "trail_brake": 1.0,
+              "throttle_point": 1.0,
+              "traction_control": 1.0,
+              "line": 0.986,
+              "lateral_g_utilization": 0.482
+            },
+            "features": {
+              "entry_speed_kmh": 112.092,
+              "apex_speed_kmh": 112.073,
+              "exit_speed_kmh": 154.36,
+              "brake_point_m": 0.0,
+              "deceleration_g": 0.0,
+              "coast_time_s": 0.0,
+              "trail_brake_r2": 0.0,
+              "throttle_gap_m": 0.0,
+              "rear_wheelspin": false,
+              "lateral_offset_m": -0.028,
+              "max_lateral_g": 0.964,
+              "time_in_corner_s": 1.98,
+              "requires_braking": false,
+              "vehicle_class": "gt3"
+            }
+          },
+          {
+            "segment_id": "Turn_6",
+            "segment_type": "corner",
+            "lap_number": 0,
+            "score": 0.927,
+            "quality": "optimal",
+            "main_issue": "lateral_g_utilization",
+            "main_issue_score": 0.231,
+            "components": {
+              "entry_speed": 1.0,
+              "apex_speed": 1.0,
+              "exit_speed": 1.0,
+              "brake_point": 1.0,
+              "braking_intensity": 0.649,
+              "brake_release": 1.0,
+              "trail_brake": 1.0,
+              "throttle_point": 1.0,
+              "traction_control": 1.0,
+              "line": 0.979,
+              "lateral_g_utilization": 0.231
+            },
+            "features": {
+              "entry_speed_kmh": 190.903,
+              "apex_speed_kmh": 124.157,
+              "exit_speed_kmh": 114.705,
+              "brake_point_m": 2251.762,
+              "deceleration_g": 1.428,
+              "coast_time_s": 0.0,
+              "trail_brake_r2": 0.989,
+              "throttle_gap_m": 3.344,
+              "rear_wheelspin": false,
+              "lateral_offset_m": 0.042,
+              "max_lateral_g": 0.462,
+              "time_in_corner_s": 1.498,
+              "requires_braking": true,
+              "vehicle_class": "gt3"
+            }
+          },
+          {
+            "segment_id": "Turn_7",
+            "segment_type": "corner",
+            "lap_number": 0,
+            "score": 0.883,
+            "quality": "optimal",
+            "main_issue": "braking_intensity",
+            "main_issue_score": 0.086,
+            "components": {
+              "entry_speed": 1.0,
+              "apex_speed": 1.0,
+              "exit_speed": 1.0,
+              "brake_point": 1.0,
+              "braking_intensity": 0.086,
+              "brake_release": 1.0,
+              "trail_brake": 0.745,
+              "throttle_point": 1.0,
+              "traction_control": 1.0,
+              "line": 0.915,
+              "lateral_g_utilization": 0.445
+            },
+            "features": {
+              "entry_speed_kmh": 91.554,
+              "apex_speed_kmh": 91.56,
+              "exit_speed_kmh": 162.011,
+              "brake_point_m": 2493.543,
+              "deceleration_g": 0.19,
+              "coast_time_s": 0.0,
+              "trail_brake_r2": 0.761,
+              "throttle_gap_m": 0.0,
+              "rear_wheelspin": false,
+              "lateral_offset_m": -0.17,
+              "max_lateral_g": 0.889,
+              "time_in_corner_s": 3.64,
+              "requires_braking": true,
+              "vehicle_class": "gt3"
+            }
+          },
+          {
+            "segment_id": "Straight_1",
+            "segment_type": "straight",
+            "lap_number": 0,
+            "score": 0.8,
+            "quality": "good",
+            "main_issue": "throttle_pct",
+            "main_issue_score": 0.0,
+            "components": {
+              "entry_speed": 1.0,
+              "exit_speed": 1.0,
+              "top_speed": 1.0,
+              "throttle_pct": 0.0,
+              "acceleration": 1.0
+            },
+            "features": {
+              "entry_speed_kmh": 138.526,
+              "exit_speed_kmh": 147.624,
+              "top_speed_kmh": 150.532,
+              "throttle_pct": 0.0,
+              "max_accel_g": 0.518,
+              "length_m": 65.716,
+              "gear_shifts": 0
+            }
+          },
+          {
+            "segment_id": "Straight_2",
+            "segment_type": "straight",
+            "lap_number": 0,
+            "score": 0.968,
+            "quality": "optimal",
+            "main_issue": "throttle_pct",
+            "main_issue_score": 0.842,
+            "components": {
+              "entry_speed": 1.0,
+              "exit_speed": 1.0,
+              "top_speed": 1.0,
+              "throttle_pct": 0.842,
+              "acceleration": 1.0
+            },
+            "features": {
+              "entry_speed_kmh": 148.192,
+              "exit_speed_kmh": 196.496,
+              "top_speed_kmh": 217.408,
+              "throttle_pct": 75.0,
+              "max_accel_g": 0.485,
+              "length_m": 387.198,
+              "gear_shifts": 1
+            }
+          },
+          {
+            "segment_id": "Straight_3",
+            "segment_type": "straight",
+            "lap_number": 0,
+            "score": 0.996,
+            "quality": "optimal",
+            "main_issue": "throttle_pct",
+            "main_issue_score": 0.98,
+            "components": {
+              "entry_speed": 1.0,
+              "exit_speed": 1.0,
+              "top_speed": 1.0,
+              "throttle_pct": 0.98,
+              "acceleration": 1.0
+            },
+            "features": {
+              "entry_speed_kmh": 147.721,
+              "exit_speed_kmh": 186.891,
+              "top_speed_kmh": 246.143,
+              "throttle_pct": 88.19,
+              "max_accel_g": 0.669,
+              "length_m": 943.438,
+              "gear_shifts": 3
+            }
+          },
+          {
+            "segment_id": "Straight_4",
+            "segment_type": "straight",
+            "lap_number": 0,
+            "score": 0.98,
+            "quality": "optimal",
+            "main_issue": "throttle_pct",
+            "main_issue_score": 0.9,
+            "components": {
+              "entry_speed": 1.0,
+              "exit_speed": 1.0,
+              "top_speed": 1.0,
+              "throttle_pct": 0.9,
+              "acceleration": 1.0
+            },
+            "features": {
+              "entry_speed_kmh": 141.598,
+              "exit_speed_kmh": 191.784,
+              "top_speed_kmh": 208.647,
+              "throttle_pct": 75.641,
+              "max_accel_g": 0.669,
+              "length_m": 321.218,
+              "gear_shifts": 2
+            }
+          },
+          {
+            "segment_id": "Straight_5",
+            "segment_type": "straight",
+            "lap_number": 0,
+            "score": 0.811,
+            "quality": "good",
+            "main_issue": "throttle_pct",
+            "main_issue_score": 0.056,
+            "components": {
+              "entry_speed": 1.0,
+              "exit_speed": 1.0,
+              "top_speed": 1.0,
+              "throttle_pct": 0.056,
+              "acceleration": 1.0
+            },
+            "features": {
+              "entry_speed_kmh": 123.215,
+              "exit_speed_kmh": 91.277,
+              "top_speed_kmh": 123.215,
+              "throttle_pct": 3.704,
+              "max_accel_g": 0.551,
+              "length_m": 84.491,
+              "gear_shifts": 0
+            }
+          },
+          {
+            "segment_id": "Straight_6",
+            "segment_type": "straight",
+            "lap_number": 0,
+            "score": 0.624,
+            "quality": "average",
+            "main_issue": "throttle_pct",
+            "main_issue_score": 0.0,
+            "components": {
+              "entry_speed": 1.0,
+              "exit_speed": 1.0,
+              "top_speed": 1.0,
+              "throttle_pct": 0.0,
+              "acceleration": 0.121
+            },
+            "features": {
+              "entry_speed_kmh": 162.101,
+              "exit_speed_kmh": 143.621,
+              "top_speed_kmh": 162.186,
+              "throttle_pct": 0.0,
+              "max_accel_g": 0.035,
+              "length_m": 68.862,
+              "gear_shifts": 0
+            }
+          }
+        ]
+      }
+    }
   }
 }

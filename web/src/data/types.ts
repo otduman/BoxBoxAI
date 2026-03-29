@@ -11,6 +11,7 @@ export interface VizData {
   segments: VizSegment[];
   markers: VizMarker[];
   car_trajectory?: [number, number][];
+  mcap_file?: string;  // Original MCAP filename for video extraction
 }
 
 export interface VizSegment {

@@ -54,6 +54,7 @@ def build_viz_data(
     segments: list[TrackSegment],
     verdicts: CoachingVerdicts,
     car_xy: np.ndarray | None = None,
+    mcap_file: str | None = None,
 ) -> dict:
     """Build the visualization data dict.
 
@@ -62,6 +63,7 @@ def build_viz_data(
         segments: Detected track segments.
         verdicts: Coaching verdicts with segment IDs.
         car_xy: Optional (M, 2) car trajectory for overlay.
+        mcap_file: Original MCAP filename for video extraction.
 
     Returns:
         Dict ready for JSON serialization.
@@ -139,6 +141,7 @@ def build_viz_data(
         },
         "segments": seg_data,
         "markers": markers,
+        "mcap_file": mcap_file,
     }
 
     # Optional car trajectory
@@ -155,13 +158,14 @@ def export_viz_json(
     verdicts: CoachingVerdicts,
     output_path: str = "viz_data.json",
     car_xy: np.ndarray | None = None,
+    mcap_file: str | None = None,
 ) -> str:
     """Export visualization JSON file.
 
     Returns:
         The output file path.
     """
-    data = build_viz_data(track, segments, verdicts, car_xy)
+    data = build_viz_data(track, segments, verdicts, car_xy, mcap_file)
     out = Path(output_path)
     with open(out, "w") as f:
         json.dump(data, f)
