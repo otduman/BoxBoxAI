@@ -68,7 +68,10 @@ def extract_frame_at_timestamp(
 
     Args:
         mcap_path: Path to MCAP file
-        target_time_s: Target time in seconds (relative to session start)
+        target_time_s: Target time in seconds. Can be:
+            - Relative to session start (0-100s range)
+            - Absolute Unix timestamp (1.7B+ seconds)
+            The function auto-detects which format is used.
         camera_topic: Specific camera topic, or None to auto-detect
         tolerance_s: Maximum time difference to accept (default 0.2s)
 
@@ -99,6 +102,10 @@ def extract_frame_at_timestamp(
     best_diff = float("inf")
     session_start_ns = None
 
+    # Auto-detect if timestamp is absolute (Unix epoch) or relative
+    # Unix timestamps from 2020+ are > 1.5 billion seconds
+    is_absolute_timestamp = target_time_s > 1_500_000_000
+
     with open(mcap_path, "rb") as f:
         reader = make_reader(f, decoder_factories=[DecoderFactory()])
 
@@ -108,9 +115,15 @@ def extract_frame_at_timestamp(
             if session_start_ns is None:
                 session_start_ns = message.log_time
 
-            # Time relative to session start
-            rel_time_s = (message.log_time - session_start_ns) / 1e9
-            diff = abs(rel_time_s - target_time_s)
+            # Compare using either absolute or relative time
+            if is_absolute_timestamp:
+                # Target is absolute Unix timestamp - compare directly
+                msg_time_s = message.log_time / 1e9
+                diff = abs(msg_time_s - target_time_s)
+            else:
+                # Target is relative to session start
+                rel_time_s = (message.log_time - session_start_ns) / 1e9
+                diff = abs(rel_time_s - target_time_s)
 
             if diff < best_diff:
                 best_diff = diff
@@ -122,8 +135,14 @@ def extract_frame_at_timestamp(
                 )
 
             # Early exit if we've passed the target by more than tolerance
-            if rel_time_s > target_time_s + tolerance_s:
-                break
+            if is_absolute_timestamp:
+                msg_time_s = message.log_time / 1e9
+                if msg_time_s > target_time_s + tolerance_s:
+                    break
+            else:
+                rel_time_s = (message.log_time - session_start_ns) / 1e9
+                if rel_time_s > target_time_s + tolerance_s:
+                    break
 
     if best_frame and best_diff <= tolerance_s:
         return best_frame

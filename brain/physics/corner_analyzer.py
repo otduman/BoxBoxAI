@@ -93,6 +93,8 @@ class CornerAnalysis:
     time_in_corner_s: float = 0.0
     archetype: str = ""
     trace: list[dict] = field(default_factory=list)
+    # Timestamp when this corner was traversed (relative to session start, seconds)
+    start_time_s: float = 0.0
 
 
 def _total_brake_pressure(df: pd.DataFrame) -> np.ndarray:
@@ -200,6 +202,8 @@ def analyze_corner(
     geo_indices = np.where(geo_mask)[0]
     if len(geo_indices) > 1:
         result.time_in_corner_s = float(corner_t[geo_indices[-1]] - corner_t[geo_indices[0]])
+        # Store the start timestamp for video snippet extraction
+        result.start_time_s = float(corner_t[geo_indices[0]])
 
     # Phase A: Braking Zone
     result.braking = _analyze_braking(

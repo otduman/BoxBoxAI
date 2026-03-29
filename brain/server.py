@@ -250,3 +250,39 @@ async def list_cameras():
 
     cameras = get_available_cameras(mcap_path)
     return {"cameras": cameras}
+
+
+# ---------------------------------------------------------------------------
+# Moment-specific Coaching API
+# ---------------------------------------------------------------------------
+
+class MomentCoachingRequest(BaseModel):
+    """Request body for moment-specific coaching."""
+    timestamp_s: float
+    segment: str
+    finding: str
+
+
+@app.post("/api/moment-coaching")
+async def moment_coaching(request: MomentCoachingRequest):
+    """
+    Get AI coaching for a specific moment in the lap.
+
+    This is used when showing video snippets of mistakes to provide
+    context-aware, actionable coaching advice.
+    """
+    chat_service = get_chat_service()
+
+    if not chat_service.is_available():
+        raise HTTPException(
+            503,
+            "AI coaching unavailable. GEMINI_API_KEY not configured."
+        )
+
+    result = chat_service.get_moment_coaching(
+        timestamp_s=request.timestamp_s,
+        segment=request.segment,
+        finding=request.finding,
+    )
+
+    return JSONResponse(result)

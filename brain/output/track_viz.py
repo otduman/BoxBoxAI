@@ -127,6 +127,7 @@ def build_viz_data(
             "measured": round(v.computed_value, 3),
             "target": round(v.reference_value, 3),
             "unit": v.unit,
+            "timestamp_s": round(v.timestamp_s, 2),
         })
 
     data = {

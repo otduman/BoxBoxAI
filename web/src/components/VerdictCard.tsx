@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertTriangle,
   Octagon,
@@ -6,10 +6,12 @@ import {
   Timer,
   Crosshair,
   Activity,
+  Video,
 } from "lucide-react";
 import { useState } from "react";
 import type { VizMarker } from "@/data/types";
 import { AutoTooltip } from "./Tooltip";
+import VideoSnippet from "./VideoSnippet";
 
 /* Unified severity colors — matches Track3D.tsx markers exactly */
 const SEV_COLORS: Record<string, { text: string; icon: string; border: string; bg: string }> = {
@@ -68,8 +70,10 @@ interface VerdictCardProps {
 
 const VerdictCard = ({ marker, index, isActive, onClick, showLapBadge }: VerdictCardProps) => {
   const [expanded, setExpanded] = useState(false);
+  const [showVideo, setShowVideo] = useState(false);
   const sev = SEV_COLORS[marker.severity] || SEV_COLORS.low;
   const categoryLabel = CATEGORY_LABELS[marker.category] || marker.category;
+  const hasTimestamp = marker.timestamp_s != null && marker.timestamp_s > 0;
 
   return (
     <motion.div
@@ -116,27 +120,66 @@ const VerdictCard = ({ marker, index, isActive, onClick, showLapBadge }: Verdict
           <AutoTooltip text={marker.finding} />
         </p>
 
-        {/* Severity + expand toggle */}
+        {/* Severity + expand toggle + video button */}
         <div className="flex items-center justify-between pl-5">
           <span
             className={`text-[10px] uppercase tracking-[0.15em] font-semibold ${sev.text}`}
           >
             {marker.severity}
           </span>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setExpanded(!expanded);
-            }}
-            className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Details
-            <motion.span animate={{ rotate: expanded ? 180 : 0 }} transition={{ duration: 0.2 }}>
-              <ChevronDown className="w-3 h-3" />
-            </motion.span>
-          </button>
+          <div className="flex items-center gap-2">
+            {hasTimestamp && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowVideo(!showVideo);
+                }}
+                className={`flex items-center gap-1 text-[10px] uppercase tracking-wider transition-colors ${
+                  showVideo ? "text-amber-400" : "text-muted-foreground hover:text-foreground"
+                }`}
+                title="View video snippet"
+              >
+                <Video className="w-3 h-3" />
+                Video
+              </button>
+            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpanded(!expanded);
+              }}
+              className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Details
+              <motion.span animate={{ rotate: expanded ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                <ChevronDown className="w-3 h-3" />
+              </motion.span>
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Video snippet */}
+      <AnimatePresence>
+        {showVideo && hasTimestamp && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="overflow-hidden"
+          >
+            <div className="px-3 pb-3">
+              <VideoSnippet
+                timestamp_s={marker.timestamp_s!}
+                segment={marker.segment}
+                finding={marker.finding}
+                onClose={() => setShowVideo(false)}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Expandable detail */}
       <motion.div

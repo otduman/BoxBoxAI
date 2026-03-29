@@ -285,6 +285,89 @@ class ChatService:
             yield f"Sorry, I encountered an error: {str(e)}"
 
 
+    def get_moment_coaching(
+        self,
+        timestamp_s: float,
+        segment: str,
+        finding: str,
+    ) -> dict:
+        """
+        Get AI coaching for a specific moment in the lap.
+
+        Returns structured coaching advice for what happened and what to do.
+        This is used when showing video snippets of mistakes.
+
+        Args:
+            timestamp_s: Time in session when the issue occurred
+            segment: Track segment name (e.g., "Turn 1")
+            finding: Description of what went wrong
+
+        Returns:
+            {
+                "what_happened": "Brief explanation of the mistake",
+                "what_to_do": "Specific action to take next time"
+            }
+        """
+        if not self.client:
+            return {
+                "what_happened": "Unable to analyze - AI service unavailable",
+                "what_to_do": "Please set GEMINI_API_KEY environment variable",
+            }
+
+        try:
+            prompt = f"""You are a racing coach analyzing a specific moment from telemetry.
+
+At {timestamp_s:.2f} seconds into the session, in {segment}, this was detected:
+"{finding}"
+
+Provide BRIEF coaching (1-2 sentences each):
+1. WHAT_HAPPENED: Explain simply what the driver did wrong
+2. WHAT_TO_DO: Give ONE specific, actionable instruction for next time
+
+Respond ONLY in this JSON format:
+{{"what_happened": "...", "what_to_do": "..."}}"""
+
+            response = self.client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=[types.Content(
+                    role="user",
+                    parts=[types.Part(text=prompt)]
+                )],
+                config=types.GenerateContentConfig(
+                    system_instruction="You are a concise racing coach. Respond only in valid JSON.",
+                    temperature=0.2,
+                ),
+            )
+
+            # Parse JSON response
+            text = response.text.strip()
+            # Handle markdown code blocks
+            if text.startswith("```"):
+                text = text.split("```")[1]
+                if text.startswith("json"):
+                    text = text[4:]
+                text = text.strip()
+
+            result = json.loads(text)
+            return {
+                "what_happened": result.get("what_happened", ""),
+                "what_to_do": result.get("what_to_do", ""),
+            }
+
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse moment coaching response: {e}")
+            return {
+                "what_happened": finding,
+                "what_to_do": "Focus on smooth inputs and gradual corrections.",
+            }
+        except Exception as e:
+            logger.error(f"Moment coaching error: {e}")
+            return {
+                "what_happened": f"Analysis error: {str(e)}",
+                "what_to_do": "Review the telemetry data manually.",
+            }
+
+
 # Global instance
 _chat_service: ChatService | None = None
 

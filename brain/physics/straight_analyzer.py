@@ -30,6 +30,8 @@ class StraightAnalysis:
     time_on_straight_s: float = 0.0
     gear_shifts: int = 0
     max_rpm: float = 0.0
+    # Timestamp when this straight was traversed (relative to session start, seconds)
+    start_time_s: float = 0.0
 
 
 def analyze_straight(
@@ -64,6 +66,7 @@ def analyze_straight(
 
     t = straight_df["t"].values
     result.time_on_straight_s = float(t[-1] - t[0])
+    result.start_time_s = float(t[0])
 
     # Speed analysis with NaN validation
     if "v_mps" in straight_df.columns:

@@ -1305,7 +1305,8 @@
         "measured": 14.186,
         "target": 25.0,
         "unit": "percent",
-        "vs_reference": false
+        "vs_reference": false,
+        "timestamp_s": 1763219835.17
       },
       {
         "category": "exit",
@@ -1319,7 +1320,8 @@
         "measured": 19.833,
         "target": 10.0,
         "unit": "meters_past_apex",
-        "vs_reference": false
+        "vs_reference": false,
+        "timestamp_s": 1763219842.11
       },
       {
         "category": "exit",
@@ -1333,7 +1335,8 @@
         "measured": 1.0,
         "target": 0.0,
         "unit": "wheelspin_present",
-        "vs_reference": false
+        "vs_reference": false,
+        "timestamp_s": 1763219863.37
       }
     ]
   },

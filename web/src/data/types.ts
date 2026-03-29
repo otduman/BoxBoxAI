@@ -39,6 +39,7 @@ export interface VizMarker {
   measured?: number;
   target?: number;
   unit?: string;
+  timestamp_s?: number;  // Time in session when the issue occurred (seconds)
 }
 
 // session_summary.json

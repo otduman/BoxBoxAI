@@ -78,6 +78,9 @@ class Verdict:
     # For comparison mode
     vs_reference: bool = False      # True if this verdict comes from lap comparison
 
+    # For video snippet extraction
+    timestamp_s: float = 0.0        # Time in session when the issue occurred (seconds)
+
 
 @dataclass
 class CoachingVerdicts:
@@ -876,33 +879,52 @@ def compute_all_verdicts(
     if ref_corners:
         ref_map = {c.segment.segment_id: c for c in ref_corners}
 
+    # Build segment-to-timestamp map for verdict timestamping
+    # Key: (lap_number, segment_id) -> start_time_s
+    segment_timestamps: dict[tuple[int, str], float] = {}
+    for lap_num, corners in corner_analyses.items():
+        for ca in corners:
+            segment_timestamps[(lap_num, ca.segment.segment_id)] = ca.start_time_s
+    for lap_num, straights in straight_analyses.items():
+        for sa in straights:
+            segment_timestamps[(lap_num, sa.segment.segment_id)] = sa.start_time_s
+
+    def _add_verdicts_with_timestamp(verdicts: list[Verdict], timestamp: float):
+        """Add verdicts with timestamp assigned."""
+        for v in verdicts:
+            v.timestamp_s = timestamp
+        all_verdicts.extend(verdicts)
+
     # Per-corner rules
     for lap_num, corners in corner_analyses.items():
         for ca in corners:
-            all_verdicts.extend(rule_coast_time(ca))
-            all_verdicts.extend(rule_trail_brake_missing(ca))
-            all_verdicts.extend(rule_trail_brake_quality(ca))
-            all_verdicts.extend(rule_late_throttle(ca))
-            all_verdicts.extend(rule_wheelspin_on_exit(ca))
+            ts = ca.start_time_s
+            _add_verdicts_with_timestamp(rule_coast_time(ca), ts)
+            _add_verdicts_with_timestamp(rule_trail_brake_missing(ca), ts)
+            _add_verdicts_with_timestamp(rule_trail_brake_quality(ca), ts)
+            _add_verdicts_with_timestamp(rule_late_throttle(ca), ts)
+            _add_verdicts_with_timestamp(rule_wheelspin_on_exit(ca), ts)
 
             # Comparison rules
             ref = ref_map.get(ca.segment.segment_id)
             if ref:
-                all_verdicts.extend(rule_braking_comparison(ca, ref))
-                all_verdicts.extend(rule_apex_speed_comparison(ca, ref))
+                _add_verdicts_with_timestamp(rule_braking_comparison(ca, ref), ts)
+                _add_verdicts_with_timestamp(rule_apex_speed_comparison(ca, ref), ts)
 
     # Per-straight rules
     for lap_num, straights in straight_analyses.items():
         for sa in straights:
-            all_verdicts.extend(rule_insufficient_acceleration(sa))
+            ts = sa.start_time_s
+            _add_verdicts_with_timestamp(rule_insufficient_acceleration(sa), ts)
 
-    # Per-lap dynamics rules
+    # Per-lap dynamics rules (use lap start time as timestamp)
     segs = segments or []
     start_times = lap_start_times or {}
     for lap_num, da in dynamics_analyses.items():
-        all_verdicts.extend(rule_dynamics_balance(da))
-        all_verdicts.extend(rule_lockup(da, segs, start_times.get(lap_num, 0.0)))
-        all_verdicts.extend(rule_friction_utilization(da))
+        ts = start_times.get(lap_num, 0.0)
+        _add_verdicts_with_timestamp(rule_dynamics_balance(da), ts)
+        _add_verdicts_with_timestamp(rule_lockup(da, segs, ts), ts)
+        _add_verdicts_with_timestamp(rule_friction_utilization(da), ts)
 
     # Sort by estimated time impact (biggest gains first), then severity
     all_verdicts.sort(key=lambda v: (-v.computed_delta_s, v.severity.value))
@@ -961,6 +983,7 @@ def verdicts_to_dict(cv: CoachingVerdicts) -> dict:
                 "target": round(v.reference_value, 3),
                 "unit": v.unit,
                 "vs_reference": v.vs_reference,
+                "timestamp_s": round(v.timestamp_s, 2),
             }
             for v in cv.verdicts
         ],
