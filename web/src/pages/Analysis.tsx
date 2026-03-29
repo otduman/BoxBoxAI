@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { motion } from "framer-motion";
-import { ArrowLeft, Gauge, Loader2, ChevronDown } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowLeft, Gauge, Loader2, ChevronDown, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Track3D from "@/components/Track3D";
 import VerdictCard from "@/components/VerdictCard";
@@ -8,6 +8,7 @@ import DynamicsPanel from "@/components/DynamicsPanel";
 import CoachPanel from "@/components/CoachPanel";
 import ChatPanel from "@/components/ChatPanel";
 import ScoringPanel from "@/components/ScoringPanel";
+import VideoSnippet from "@/components/VideoSnippet";
 import { useSessionStore } from "@/data/sessionStore";
 
 const Analysis = () => {
@@ -15,6 +16,7 @@ const Analysis = () => {
   const { vizData, summary, isLoading, error, loadFromUrl } = useSessionStore();
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const [selectedLap, setSelectedLap] = useState<number | "all">("all");
+  const [showVideoModal, setShowVideoModal] = useState(false);
   const verdictListRef = useRef<HTMLDivElement>(null);
 
   // Load demo data if nothing is in the store yet (direct URL navigation)
@@ -54,10 +56,19 @@ const Analysis = () => {
   const handleMarkerClick = (idx: number) => {
     if (idx < 0 || activeIdx === idx) {
       setActiveIdx(null);
+      setShowVideoModal(false);
     } else {
       setActiveIdx(idx);
+      // Show video modal if the marker has a timestamp
+      const marker = vizData?.markers[idx];
+      if (marker?.timestamp_s && marker.timestamp_s > 0) {
+        setShowVideoModal(true);
+      }
     }
   };
+
+  // Get the active marker for video modal
+  const activeMarker = activeIdx !== null ? vizData?.markers[activeIdx] : null;
 
   // Auto-scroll sidebar to the active verdict card
   useEffect(() => {
@@ -176,6 +187,32 @@ const Analysis = () => {
       <div className="flex-1 flex flex-col overflow-hidden relative">
         <div className="h-[45vh] flex-shrink-0 md:absolute md:inset-0 md:h-auto">
           <Track3D data={vizData} activeMarkerIdx={activeIdx} onMarkerClick={handleMarkerClick} />
+
+          {/* Video snippet modal overlay on map */}
+          <AnimatePresence>
+            {showVideoModal && activeMarker && activeMarker.timestamp_s && activeMarker.timestamp_s > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                className="absolute bottom-4 left-4 z-30 w-[320px] max-w-[calc(100%-2rem)] md:max-w-[350px]"
+              >
+                <div className="relative">
+                  <button
+                    onClick={() => setShowVideoModal(false)}
+                    className="absolute -top-2 -right-2 z-10 p-1 rounded-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 transition-colors"
+                  >
+                    <X className="w-3 h-3 text-zinc-300" />
+                  </button>
+                  <VideoSnippet
+                    timestamp_s={activeMarker.timestamp_s}
+                    segment={activeMarker.segment}
+                    finding={activeMarker.finding}
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         <motion.aside

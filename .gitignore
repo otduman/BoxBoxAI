@@ -41,6 +41,9 @@ session_summary.prompt.json
 tmp_*.py
 *.tmp
 
+# Uploaded MCAP files (persisted for video extraction)
+uploads/
+
 # Web Frontend (Lovable / React / Vite)
 web/node_modules/
 web/dist/
