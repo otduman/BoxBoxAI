@@ -13,6 +13,7 @@ interface SessionState {
   isLoading: boolean;
   error: string | null;
   pipelineProgress: string | null;
+  uploadProgress: number | null; // 0-100 during upload, null otherwise
   // Chat context for "Ask AI" feature
   askAIContext: AskAIContext | null;
   chatOpen: boolean;
@@ -60,6 +61,7 @@ export const useSessionStore = create<SessionState>((set) => ({
   isLoading: false,
   error: null,
   pipelineProgress: null,
+  uploadProgress: null,
   askAIContext: null,
   chatOpen: false,
 
@@ -88,7 +90,7 @@ export const useSessionStore = create<SessionState>((set) => ({
   },
 
   loadFromMcap: async (mcapFile, boundaryFile) => {
-    set({ isLoading: true, error: null, pipelineProgress: "Uploading telemetry..." });
+    set({ isLoading: true, error: null, pipelineProgress: "Uploading telemetry...", uploadProgress: 0 });
     try {
       const form = new FormData();
       form.append("mcap", mcapFile);
@@ -96,21 +98,41 @@ export const useSessionStore = create<SessionState>((set) => ({
         form.append("boundaries", boundaryFile);
       }
 
-      set({ pipelineProgress: "Analyzing telemetry (this may take ~15s)..." });
+      // Use XHR to track upload progress (fetch API doesn't support it)
+      const data = await new Promise<{ viz_data: VizData; session_summary: SessionSummary }>(
+        (resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("POST", "/api/analyze");
 
-      const res = await fetch("/api/analyze", { method: "POST", body: form });
-      if (!res.ok) {
-        const body = await res.text();
-        throw new Error(`Pipeline failed (${res.status}): ${body}`);
-      }
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              const pct = Math.round((e.loaded / e.total) * 100);
+              set({
+                uploadProgress: pct,
+                pipelineProgress: pct < 100
+                  ? `Uploading... ${pct}%`
+                  : "Analyzing telemetry (~15s)...",
+              });
+            }
+          };
 
-      const data = await res.json();
-      const vizData = data.viz_data as VizData;
-      const summary = data.session_summary as SessionSummary;
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try { resolve(JSON.parse(xhr.responseText)); }
+              catch { reject(new Error("Invalid response from server")); }
+            } else {
+              reject(new Error(`Pipeline failed (${xhr.status}): ${xhr.responseText}`));
+            }
+          };
 
-      set({ vizData, summary, isLoading: false, pipelineProgress: null });
+          xhr.onerror = () => reject(new Error("Network error during upload"));
+          xhr.send(form);
+        }
+      );
+
+      set({ vizData: data.viz_data, summary: data.session_summary, isLoading: false, pipelineProgress: null, uploadProgress: null });
     } catch (e) {
-      set({ error: (e as Error).message, isLoading: false, pipelineProgress: null });
+      set({ error: (e as Error).message, isLoading: false, pipelineProgress: null, uploadProgress: null });
     }
   },
 

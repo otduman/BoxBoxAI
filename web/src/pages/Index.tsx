@@ -16,7 +16,7 @@ interface DemoMeta { lapTime: string; issues: number; gain: string }
 
 const Index = () => {
   const navigate = useNavigate();
-  const { loadFromUrl, loadFromMcap, isLoading, pipelineProgress } =
+  const { loadFromUrl, loadFromMcap, isLoading, pipelineProgress, uploadProgress } =
     useSessionStore();
   const [demoMeta, setDemoMeta] = useState<Record<"fast" | "good", DemoMeta>>({
     fast: { lapTime: "—:——.———", issues: 0, gain: "—" },
@@ -228,6 +228,23 @@ const Index = () => {
                   Analyze Session
                 </>
               )}
+            {isLoading && uploadProgress !== null && (
+              <div className="w-full mt-2 space-y-1">
+                <div className="w-full h-1.5 bg-foreground/10 rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-racing-red rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${uploadProgress}%` }}
+                    transition={{ ease: "linear", duration: 0.3 }}
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground font-mono text-center">
+                  {uploadProgress < 100
+                    ? `${uploadProgress}% uploaded`
+                    : "Processing on server..."}
+                </p>
+              </div>
+            )}
             </motion.button>
           )}
         </motion.div>

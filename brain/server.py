@@ -392,4 +392,8 @@ if _frontend_dist.exists():
         file = _frontend_dist / full_path
         if file.is_file():
             return FileResponse(str(file))
+        # Only serve index.html for app routes (no file extension = SPA route)
+        # Return 404 for missing files with extensions (.json, .js, etc.)
+        if Path(full_path).suffix:
+            raise HTTPException(404, "Not found")
         return FileResponse(str(_frontend_dist / "index.html"))
