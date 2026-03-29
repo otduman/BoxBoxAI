@@ -169,14 +169,6 @@ const Analysis = () => {
               {lapTime}
             </p>
           </div>
-          {totalGain > 0 && (
-            <div className="flex flex-col items-end">
-              <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">Potential</p>
-              <span className="font-mono text-xs sm:text-sm font-bold px-2 py-0.5 rounded bg-[#eab308]/15 text-[#eab308] border border-[#eab308]/30">
-                -{totalGain.toFixed(2)}s
-              </span>
-            </div>
-          )}
         </div>
       </header>
 
