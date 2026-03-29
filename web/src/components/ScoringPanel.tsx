@@ -304,7 +304,14 @@ const ScoringPanel = ({ scoring, selectedLap = "all" }: ScoringPanelProps) => {
 
                   {/* Ask AI button */}
                   <button
-                    onClick={() => askAIAboutScore(seg.segment_id, seg.score, seg.main_issue, seg.components)}
+                    onClick={() => askAIAboutScore(
+                      seg.segment_id,
+                      seg.segment_type,
+                      seg.score,
+                      seg.main_issue,
+                      seg.components,
+                      seg.features
+                    )}
                     className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-md bg-racing-red/10 hover:bg-racing-red/20 text-racing-red text-[10px] uppercase tracking-wider font-medium transition-colors"
                   >
                     <MessageCircle className="w-3 h-3" />

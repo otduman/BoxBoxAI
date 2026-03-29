@@ -5,7 +5,7 @@ import { useSessionStore } from "@/data/sessionStore";
 
 /**
  * Simple markdown renderer for chat messages.
- * Supports: **bold**, *italic*, `code`, and line breaks.
+ * Supports: **bold**, *italic*, `code`, numbered lists, and line breaks.
  */
 const renderMarkdown = (text: string): React.ReactNode[] => {
   const parts: React.ReactNode[] = [];
@@ -19,8 +19,20 @@ const renderMarkdown = (text: string): React.ReactNode[] => {
       parts.push(<br key={`br-${key++}`} />);
     }
 
-    // Process inline markdown: **bold**, *italic*, `code`
-    const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`)/g;
+    // Check for numbered list items (e.g., "1. ", "2. ")
+    const listMatch = line.match(/^(\d+)\.\s+(.*)$/);
+    if (listMatch) {
+      parts.push(
+        <span key={`list-${key++}`} className="font-semibold text-racing-red">
+          {listMatch[1]}.{" "}
+        </span>
+      );
+      line = listMatch[2];
+    }
+
+    // Process inline markdown: **bold** first (must come before *italic*), then *italic*, then `code`
+    // Using a more specific regex that handles ** before *
+    const regex = /(\*\*([^*]+)\*\*)|(\*([^*]+)\*)|(`([^`]+)`)/g;
     let lastIndex = 0;
     let match;
 
@@ -33,25 +45,25 @@ const renderMarkdown = (text: string): React.ReactNode[] => {
       if (match[2]) {
         // **bold**
         parts.push(
-          <strong key={`b-${key++}`} className="font-semibold">
+          <strong key={`b-${key++}`} className="font-semibold text-foreground">
             {match[2]}
           </strong>
         );
-      } else if (match[3]) {
+      } else if (match[4]) {
         // *italic*
         parts.push(
           <em key={`i-${key++}`} className="italic">
-            {match[3]}
+            {match[4]}
           </em>
         );
-      } else if (match[4]) {
+      } else if (match[6]) {
         // `code`
         parts.push(
           <code
             key={`c-${key++}`}
             className="px-1 py-0.5 rounded bg-foreground/10 font-mono text-xs"
           >
-            {match[4]}
+            {match[6]}
           </code>
         );
       }

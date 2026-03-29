@@ -141,16 +141,46 @@ export const useSessionStore = create<SessionState>((set) => ({
     });
   },
 
-  askAIAboutScore: (segmentId, score, mainIssue, components) => {
-    // Build a detailed question with score breakdown
+  askAIAboutScore: (segmentId, segmentType, score, mainIssue, components, features) => {
+    // Build a detailed question with score breakdown and telemetry
     const scorePercent = (score * 100).toFixed(0);
-    const weakestComponents = Object.entries(components)
+
+    // Format component scores (what contributed to the score)
+    const allComponents = Object.entries(components)
       .sort(([, a], [, b]) => a - b)
-      .slice(0, 3)
-      .map(([name, val]) => `${name}: ${(val * 100).toFixed(0)}%`)
+      .map(([name, val]) => `${name.replace(/_/g, " ")}: ${(val * 100).toFixed(0)}%`)
       .join(", ");
 
-    const question = `My performance score for ${segmentId} is ${scorePercent}/100. The main issue is "${mainIssue}". My weakest areas are: ${weakestComponents}. Why did I score low in these areas and what specific techniques should I focus on to improve?`;
+    // Format telemetry features (actual measured values)
+    const telemetryLines: string[] = [];
+    if (segmentType === "corner") {
+      if (features.entry_speed_kmh) telemetryLines.push(`Entry speed: ${(features.entry_speed_kmh as number).toFixed(0)} km/h`);
+      if (features.apex_speed_kmh) telemetryLines.push(`Apex speed: ${(features.apex_speed_kmh as number).toFixed(0)} km/h`);
+      if (features.exit_speed_kmh) telemetryLines.push(`Exit speed: ${(features.exit_speed_kmh as number).toFixed(0)} km/h`);
+      if (features.max_lateral_g) telemetryLines.push(`Max lateral G: ${(features.max_lateral_g as number).toFixed(2)}G`);
+      if (features.braking_g) telemetryLines.push(`Braking G: ${(features.braking_g as number).toFixed(2)}G`);
+      if (features.trail_brake_quality !== undefined) telemetryLines.push(`Trail brake quality: ${((features.trail_brake_quality as number) * 100).toFixed(0)}%`);
+      if (features.coast_time_s) telemetryLines.push(`Coast time: ${(features.coast_time_s as number).toFixed(2)}s`);
+    } else {
+      if (features.entry_speed_kmh) telemetryLines.push(`Entry speed: ${(features.entry_speed_kmh as number).toFixed(0)} km/h`);
+      if (features.top_speed_kmh) telemetryLines.push(`Top speed: ${(features.top_speed_kmh as number).toFixed(0)} km/h`);
+      if (features.exit_speed_kmh) telemetryLines.push(`Exit speed: ${(features.exit_speed_kmh as number).toFixed(0)} km/h`);
+      if (features.throttle_pct) telemetryLines.push(`Full throttle: ${(features.throttle_pct as number).toFixed(0)}%`);
+      if (features.max_accel_g) telemetryLines.push(`Max acceleration: ${(features.max_accel_g as number).toFixed(2)}G`);
+    }
+    const telemetry = telemetryLines.join(", ");
+
+    const question = `Analyze my ${segmentType} performance at ${segmentId}:
+
+**Overall Score:** ${scorePercent}/100
+**Main Issue:** ${mainIssue}
+**Component Scores:** ${allComponents}
+**Telemetry Data:** ${telemetry}
+
+Based on these exact numbers, explain:
+1. What specifically caused each low component score?
+2. What technique changes would improve my weakest areas?
+3. What should my target values be for entry/apex/exit speed?`;
 
     // Create a minimal marker for the context
     const marker = {
