@@ -1,4 +1,5 @@
-# Pocket Race Engineer
+![BoxBox.AI](web/public/logo.png)
+# BoxBox.AI -Pocket Race Engineer 
 ### AI Race Coaching from Raw Telemetry
 **Constructor GenAI Hackathon 2026**
 
@@ -10,7 +11,7 @@ If you've ever driven on a track and felt like you *should* be faster but had no
 
 Drivers generate enormous amounts of telemetry data. The problem is that telemetry tools were built for engineers, not drivers. You can open a graph showing your brake pressure over time, but unless you already know what good brake pressure looks like, the graph tells you nothing. Meanwhile, a real race engineer sitting beside you could look at that same data and immediately say: *"You're braking 15 meters too late into Turn 4 — the car's unstable on entry and you're bleeding two tenths every lap."*
 
-That kind of coaching doesn't scale. Most drivers — even competitive amateurs — don't have access to it. **Pocket Race Engineer is our answer to that.**
+That kind of coaching doesn't scale. Most drivers — even competitive amateurs — don't have access to it. **BoxBox.AI is our answer to that.**
 
 ---
 
@@ -306,7 +307,7 @@ A lot of AI tools in motorsport try to do everything with a large language model
 
 The physics analysis is entirely deterministic. The rule engine runs on hard thresholds grounded in vehicle dynamics theory, not vibes or training data. We use Gemini for exactly one thing: turning trustworthy, structured findings into language a driver can actually understand and act on.
 
-That hybrid design is the core of Pocket Race Engineer. It's why the coaching is specific rather than generic, why it won't hallucinate that you're understeering when you're oversteering, and why every insight can be traced back to real telemetry evidence.
+That hybrid design is the core of BoxBox.AI. It's why the coaching is specific rather than generic, why it won't hallucinate that you're understeering when you're oversteering, and why every insight can be traced back to real telemetry evidence.
 
 The goal was never to replace race engineers. It was to make that quality of feedback available to every driver who's ever wanted to know: *what exactly am I doing wrong, and what do I fix first?*
 
@@ -316,6 +317,6 @@ The goal was never to replace race engineers. It was to make that quality of fee
 
 > "A race engineer in your pocket — for every driver, at every level."
 
-From club racers who can't afford a data engineer, to sim drivers trying to learn real technique, to competitive amateurs who generate data but don't know what to do with it — Pocket Race Engineer makes professional-grade feedback accessible, scalable, and actually understandable.
+From club racers who can't afford a data engineer, to sim drivers trying to learn real technique, to competitive amateurs who generate data but don't know what to do with it — BoxBox.AI makes professional-grade feedback accessible, scalable, and actually understandable.
 
 We're not just showing you data. We're turning it into improvement.
