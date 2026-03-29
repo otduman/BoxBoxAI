@@ -58,11 +58,7 @@ We compute real signals from the telemetry:
 
 This tells us how well the car is actually being driven, using physics — not gut feel.
 
-### Step 4 — Compare Against a Pro Lap
-
-We align your lap against a reference (professional) lap at the same track position and compare speed, braking points, and throttle application corner by corner. Now we know not just *that* you're slower, but *where* and *by how much*.
-
-### Step 5 — Run the Coaching Rule Engine
+### Step 4 — Run the Coaching Rule Engine
 
 A rule engine converts all of that physics data into structured insights. Things like:
 
@@ -72,7 +68,7 @@ A rule engine converts all of that physics data into structured insights. Things
 
 Each verdict comes with a severity rating, an estimated time loss, and the raw telemetry that backs it up. This is the deterministic layer — trustworthy, repeatable, not made up.
 
-### Step 6 — Let Gemini Explain It Like a Human
+### Step 5 — Let Gemini Explain It Like a Human
 
 Finally, we pass those structured insights to Gemini. The AI generates natural language explanations tailored to the driver's level (beginner / intermediate / advanced) and powers the interactive chat. This is where understanding actually happens — the physics tells us what's wrong, Gemini helps the driver genuinely get it.
 
@@ -97,54 +93,6 @@ Visual front-end with track maps, insight markers (clickable for video clips), l
 
 **Zero Setup Input**  
 Drop in one `.mcap` file and you're off. Custom track boundary JSON is optional — it defaults to Yas Marina.
-
----
-
-## 🎬 The Analysis Page: Interactive Breakdown
-
-The **Analysis page** (`web/src/pages/Analysis.tsx`) is where drivers get their full coaching session. It's organized into several integrated panels:
-
-### Left Sidebar: Verdict Cards
-- Lists all detected mistakes, sorted by time impact (biggest first)
-- Each card shows: severity badge, category, corner/segment, and estimated time gain
-- **Interactive**: Click any card to:
-  - Highlight that marker on the track map
-  - Show the video frame at that exact moment (if MCAP has video data)
-  - Display AI coaching for that specific mistake
-  - Expand to see: telemetry values, reasoning, and specific action items
-
-### Center: Track3D Map
-- 3D visualization of your lap line overlaid on the track
-- Color-coded markers for each mistake (red=critical, orange=high, yellow=medium)
-- Pan, zoom, rotate to inspect your line through problem corners
-- Lap selector for multi-lap sessions
-- Clicking a marker auto-selects its verdict card
-
-### Bottom Right Panels (Tabbed):
-
-**1. Coach Panel**
-- Summary of deterministic verdicts
-- Pre-computed analysis from the physics engine
-- Top 3 priority actions ranked by time impact
-- Estimated total gain if all issues are fixed
-
-**2. Dynamics Panel** 
-- G-g diagram showing lateral vs. braking forces
-- Friction circle utilization percentage
-- Peak G-forces (lateral, braking, acceleration)
-- Shows how aggressively (or conservatively) you're using the car
-
-**3. Scoring Panel**
-- Segment-by-segment breakdown of performance
-- Score for each corner/straight (0-1 scale)
-- Component analysis: acceleration, turn entry, apex, exit quality
-- Identifies your weakest segments
-
-**4. Chat Panel**
-- Live AI coaching interface
-- Ask questions about your performance
-- Maintains conversation history
-- Responses grounded in your actual session data
 
 ---
 
@@ -181,10 +129,6 @@ When analyzing a lap, each mistake is displayed as an interactive **Verdict Card
 2. **Get moment-specific coaching** — AI generates "What happened" and "What to do" advice specific to that instant
 3. **View the telemetry** — Shows the measured values that triggered the verdict (brake pressure, speed, slip ratio, etc.)
 4. **Understand the time cost** — See exactly how many tenths this mistake is costing you per lap
-
-The VideoSnippet component (`web/src/components/VideoSnippet.tsx`) calls two backend endpoints:
-- `/api/frame?timestamp=<seconds>` — Extracts a video frame at the given timestamp
-- `/api/moment-coaching` (POST) — Generates AI coaching for that specific moment
 
 This makes mistakes tangible — instead of just reading "apex speed too low," you see yourself on track, at that exact corner, with the frame overlaid showing what the data meant.
 
@@ -310,7 +254,7 @@ $env:GEMINI_API_KEY="your_api_key_here"
 Start the backend server:
 
 ```bash
-cd autonomous-driving-coach
+cd ..
 uvicorn brain.server:app --reload --port 8000
 ```
 
