@@ -310,6 +310,7 @@ $env:GEMINI_API_KEY="your_api_key_here"
 Start the backend server:
 
 ```bash
+cd autonomous-driving-coach
 uvicorn brain.server:app --reload --port 8000
 ```
 
@@ -331,7 +332,6 @@ Frontend available at `http://localhost:8080`
 
 ## Performance
 
-- ~25–60 seconds to process a 1 GB MCAP file
 - Selective topic parsing skips non-driving data for speed
 - Streaming responses on the chat endpoint for snappy UX
 - Time-series alignment via Pandas & NumPy
@@ -350,7 +350,6 @@ The **video snippet feature** requires that your MCAP file contains encoded vide
 - If API key is not set, `/api/chat` returns a 503 (unavailable) response  
 
 ### Performance Considerations
-- First run on a large MCAP file (~1GB) takes ~25-60 seconds
 - Subsequent requests use cached JSON data (much faster)
 - Video frame extraction is real-time but depends on MCAP encoding quality
 - Streaming chat responses arrive in chunks for better UX
@@ -376,4 +375,3 @@ The goal was never to replace race engineers. It was to make that quality of fee
 From club racers who can't afford a data engineer, to sim drivers trying to learn real technique, to competitive amateurs who generate data but don't know what to do with it — Pocket Race Engineer makes professional-grade feedback accessible, scalable, and actually understandable.
 
 We're not just showing you data. We're turning it into improvement.
-
