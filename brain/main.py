@@ -37,6 +37,7 @@ def run_pipeline(
     primary_only: bool = False,
     driver_level: str = "intermediate",
     driver_profile: str = "autonomous",
+    reference_path: str | None = None,
 ) -> dict:
     """Run the full Brain pipeline: MCAP -> analysis -> JSON.
 
@@ -170,8 +171,6 @@ def run_pipeline(
         corner_analyses=corner_analyses,
         straight_analyses=straight_analyses,
         dynamics_analyses=dynamics_analyses,
-        tire_analyses=tire_analyses,
-        brake_analyses=brake_analyses,
         segments=segments,
         lap_start_times=lap_start_times,
         ref_corners=ref_corners,
@@ -213,9 +212,33 @@ def run_pipeline(
         json.dump(prompt, f, indent=2)
     logger.info(f"LLM prompt saved to {prompt_path}")
 
+    # --- Step 7b: Build Generative AI LLM prompt ---
+    if reference_path:
+        logger.info(f"Step 7b: Building Generative AI prompt using reference {reference_path}...")
+        try:
+            with open(reference_path, "r") as f:
+                ref_summary = json.load(f)
+            from brain.output.llm_prompt import build_generative_coaching_prompt
+            gen_prompt = build_generative_coaching_prompt(summary, ref_summary, driver_level=driver_level)
+            gen_prompt_path = Path(output_path).with_name("generative_coaching.prompt.json")
+            with open(gen_prompt_path, "w") as f:
+                json.dump(gen_prompt, f, indent=2)
+            logger.info(f"Generative LLM prompt saved to {gen_prompt_path}")
+            
+            # Trigger Live LLM analysis if API key is present
+            from brain.llm_client import generate_insights
+            insights_path = Path(output_path).with_name("generative_insights.json")
+            generate_insights(gen_prompt_path, insights_path)
+            
+        except Exception as e:
+            logger.error(f"Failed to build generative prompt: {e}")
+
     # --- Step 8: Export track visualization data ---
     logger.info("Step 8: Exporting track visualization data...")
-    viz_path = Path(output_path).with_name("viz_data.json")
+    # Derive viz filename from output: session_summary_fast.json → viz_data_fast.json
+    out_stem = Path(output_path).stem  # e.g. "session_summary_fast"
+    viz_suffix = out_stem.replace("session_summary", "viz_data") if "session_summary" in out_stem else "viz_data"
+    viz_path = Path(output_path).with_name(f"{viz_suffix}.json")
     car_xy = master[["x_m", "y_m"]].values if "x_m" in master.columns else None
     export_viz_json(track, segments, coaching_verdicts, str(viz_path), car_xy=car_xy)
 
@@ -261,6 +284,11 @@ def main():
         help="Driver profile: 'autonomous' for tight thresholds, 'human' for relaxed (default: autonomous)",
     )
     parser.add_argument(
+        "--reference", "-r",
+        default=None,
+        help="Path to a pre-computed session_summary.json to use as a 'Good Lap' reference for Generative AI coaching",
+    )
+    parser.add_argument(
         "--verbose", "-v",
         action="store_true",
         help="Enable verbose logging",
@@ -281,6 +309,7 @@ def main():
         primary_only=args.primary_only,
         driver_level=args.driver_level,
         driver_profile=args.profile,
+        reference_path=args.reference,
     )
 
 

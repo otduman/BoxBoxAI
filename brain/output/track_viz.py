@@ -117,12 +117,16 @@ def build_viz_data(
             "x": mx,
             "y": my,
             "segment": v.segment_id or "Lap-level",
+            "lap": v.lap_number,
             "category": v.category.value,
             "severity": v.severity.value,
             "finding": v.finding,
             "reasoning": v.reasoning,
             "action": v.action,
             "time_impact_s": round(v.computed_delta_s, 3),
+            "measured": round(v.computed_value, 3),
+            "target": round(v.reference_value, 3),
+            "unit": v.unit,
         })
 
     data = {

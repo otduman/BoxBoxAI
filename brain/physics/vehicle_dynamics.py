@@ -148,10 +148,18 @@ def _compute_gg_metrics(df: pd.DataFrame) -> GGDiagramMetrics:
     m.peak_combined_g = float(combined.max())
     m.avg_combined_g = float(combined.mean())
 
-    # Friction circle utilization: average g as percentage of peak g
-    # (This measures how consistently the driver uses the available grip)
+    # Friction circle utilization: fraction of active-grip samples near the peak.
+    # "Active" = combined g above 30% of peak (excludes straights/coasting).
+    # Metric: what % of corner/braking time is the driver within 80% of their own peak g?
+    # This measures driver skill, not track geometry.
     if m.peak_combined_g > 0:
-        m.friction_circle_utilization_pct = float((m.avg_combined_g / m.peak_combined_g) * 100)
+        active_threshold = m.peak_combined_g * 0.30
+        active = combined[combined >= active_threshold]
+        if len(active) > 0:
+            near_peak = active[active >= m.peak_combined_g * 0.80]
+            m.friction_circle_utilization_pct = float(len(near_peak) / len(active) * 100)
+        else:
+            m.friction_circle_utilization_pct = 0.0
 
     return m
 

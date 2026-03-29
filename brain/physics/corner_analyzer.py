@@ -91,6 +91,8 @@ class CornerAnalysis:
     exit: ExitMetrics = field(default_factory=ExitMetrics)
     entry_speed_kmh: float = 0.0
     time_in_corner_s: float = 0.0
+    archetype: str = ""
+    trace: list[dict] = field(default_factory=list)
 
 
 def _total_brake_pressure(df: pd.DataFrame) -> np.ndarray:
@@ -180,6 +182,8 @@ def analyze_corner(
     )
     ax = corner_df["ax_mps2"].values if "ax_mps2" in corner_df.columns else np.zeros(len(corner_df))
     ay = corner_df["ay_mps2"].values if "ay_mps2" in corner_df.columns else np.zeros(len(corner_df))
+    yaw = corner_df["wz_radps"].values if "wz_radps" in corner_df.columns else np.zeros(len(corner_df))
+    slip = corner_df["beta_rad"].values if "beta_rad" in corner_df.columns else np.zeros(len(corner_df))
 
     # Smooth signals
     brake_p_smooth = _smooth(brake_p)
@@ -224,6 +228,39 @@ def analyze_corner(
             f"Phase overlap in {segment.segment_id} lap {lap_number}: "
             f"trail-brake extends past apex"
         )
+        
+    # Calculate Cross-Track Archetype
+    apex_speed = result.apex.min_speed_kmh
+    speed_prof = "LowSpeed" if apex_speed < 100 else ("MidSpeed" if apex_speed < 150 else "HighSpeed")
+    dir_str = segment.direction.capitalize()
+    geo_type = "90Deg"
+    if segment.peak_curvature > 0.035: # Tight radius (< ~28m)
+        geo_type = "Hairpin"
+    elif segment.length_m > 120 and segment.avg_curvature < 0.015:
+        geo_type = "Sweeper"
+    
+    result.archetype = f"{speed_prof}_{dir_str}_{geo_type}"
+
+    # Extract downsampled trajectory trace
+    trace = []
+    if len(corner_df) >= 10:
+        trace_indices = np.linspace(0, len(corner_df) - 1, num=10, dtype=int)
+        for idx in trace_indices:
+            row = corner_df.iloc[idx]
+            bp_val = brake_p_smooth[idx] if len(brake_p_smooth) > idx else 0.0
+            sp_val = speed_smooth[idx] * MPS_TO_KMH if len(speed_smooth) > idx else 0.0
+            trace.append({
+                "d": round(float(row.get("track_dist_m", 0)), 1),
+                "v": round(float(sp_val), 1),
+                "br": round(float(bp_val), 0),
+                "gas": round(float(row.get("gas", 0)), 2),
+                "steer": round(float(row.get("delta_wheel_rad", 0)), 3),
+                "ax": round(float(ax[idx]), 2) if len(ax) > idx else 0.0,
+                "ay": round(float(ay[idx]), 2) if len(ay) > idx else 0.0,
+                "yaw": round(float(yaw[idx]), 3) if len(yaw) > idx else 0.0,
+                "slip": round(float(slip[idx]), 3) if len(slip) > idx else 0.0,
+            })
+    result.trace = trace
 
     return result
 
@@ -249,6 +286,9 @@ def _analyze_braking(df, dist, t, brake_p, ax, segment) -> BrakingMetrics:
         search_end = len(brake_p)
     
     search_end = min(search_end, len(brake_p))
+    if m.start_idx >= search_end:
+        return m
+        
     peak_idx = m.start_idx + int(brake_p[m.start_idx:search_end].argmax())
     peak = brake_p[peak_idx]
     m.peak_brake_pressure_pa = float(peak)
@@ -427,13 +467,22 @@ def _analyze_exit(df, dist, t, gas, steering, brake_p, speed, segment, apex) -> 
             # Throttle before brake fully released (overlap, good!)
             m.coast_time_s = 0.0
 
-    # Rear wheelspin (uses config threshold, raw units not 0-1)
-    from brain.config import WHEELSPIN_LAMBDA_THRESHOLD
+    # Rear wheelspin — require sustained event (min_event_duration), not just a single spike
+    from brain.config import WHEELSPIN_LAMBDA_THRESHOLD, TARGET_HZ, get_active_profile
+    min_samples = max(1, int(get_active_profile().min_event_duration_s * TARGET_HZ))
     for col in ["lambda_rl_perc", "lambda_rr_perc"]:
         if col in df.columns:
             vals = df[col].iloc[post_indices].values
-            if (vals > WHEELSPIN_LAMBDA_THRESHOLD).any():
-                m.rear_wheelspin = True
+            above = vals > WHEELSPIN_LAMBDA_THRESHOLD
+            # Check for min_samples consecutive True values
+            if len(above) >= min_samples:
+                consecutive = 0
+                for v in above:
+                    consecutive = consecutive + 1 if v else 0
+                    if consecutive >= min_samples:
+                        m.rear_wheelspin = True
+                        break
+            if m.rear_wheelspin:
                 break
 
     return m

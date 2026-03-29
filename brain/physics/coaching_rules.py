@@ -21,21 +21,15 @@ import logging
 from dataclasses import dataclass, field
 from enum import Enum
 
-import numpy as np
-
 from brain.config import (
     MPS_TO_KMH,
-    G_ACCEL,
     BRAKE_ON_THRESHOLD_PA,
     get_active_profile,
 )
 from brain.physics.corner_analyzer import CornerAnalysis
 from brain.physics.straight_analyzer import StraightAnalysis
 from brain.physics.vehicle_dynamics import VehicleDynamicsAnalysis
-from brain.physics.tire_analyzer import TireAnalysis
-from brain.physics.brake_analyzer import BrakeAnalysis
 from brain.track.segmentation import TrackSegment
-from brain.physics.consistency import LapComparisonDelta
 
 logger = logging.getLogger(__name__)
 
@@ -704,26 +698,24 @@ def rule_friction_utilization(dynamics: VehicleDynamicsAnalysis) -> list[Verdict
     """
     verdicts = []
     util = dynamics.gg_metrics.friction_circle_utilization_pct
-    # Threshold: 60% for qualifying-level analysis
-    QUALIFYING_TARGET = 60.0
-    if util >= QUALIFYING_TARGET:
+    peak_g = dynamics.gg_metrics.peak_combined_g
+
+    # New metric: % of active-grip time spent within 80% of own peak g.
+    # A well-driven lap should have 25-40% of corner time near the limit.
+    # Below 15% means most corners are well below the car's capability.
+    TARGET = 25.0
+    if util >= TARGET:
         return verdicts
-    if util <= 0:
+    if util <= 0 or peak_g <= 0:
         return verdicts
 
-    sev = Severity.HIGH if util < 45 else Severity.MEDIUM
+    sev = Severity.MEDIUM if util >= 10 else Severity.HIGH
 
-    # Estimate time impact: grip deficit means slower cornering speeds.
-    # Average utilization includes straights (naturally low g), so the actual
-    # cornering-phase deficit is smaller than the raw number suggests.
-    # Conservative model: ~15% of lap time is spent at grip limit,
-    # and time scales as 1/sqrt(grip_fraction).
-    target_util = 65.0
-    grip_deficit_fraction = 1.0 - (util / target_util) ** 0.5
-    grip_limited_fraction = 0.15  # only ~15% of lap is truly grip-limited
+    # Time impact: proportional to grip deficit fraction, capped at 2% of lap
+    grip_deficit_fraction = 1.0 - (util / TARGET) ** 0.5
     estimated_loss = min(
-        dynamics.lap_duration_s * grip_limited_fraction * grip_deficit_fraction,
-        dynamics.lap_duration_s * 0.03,  # cap at 3% of lap time
+        dynamics.lap_duration_s * 0.12 * grip_deficit_fraction,
+        dynamics.lap_duration_s * 0.02,
     )
 
     verdicts.append(Verdict(
@@ -732,25 +724,23 @@ def rule_friction_utilization(dynamics: VehicleDynamicsAnalysis) -> list[Verdict
         segment_id="",
         lap_number=dynamics.lap_number,
         finding=(
-            f"Friction circle utilization: {util:.1f}% "
-            f"(peak combined g: {dynamics.gg_metrics.peak_combined_g:.2f}g, "
-            f"target: >{QUALIFYING_TARGET:.0f}% for qualifying pace)."
+            f"Only {util:.1f}% of cornering time near grip limit "
+            f"(peak: {peak_g:.2f}g, target: >{TARGET:.0f}% of corners at ≥80% peak g)."
         ),
         reasoning=(
-            f"The car is using only {util:.1f}% of its available grip on average. "
-            f"The remaining {QUALIFYING_TARGET - util:.0f}% to target is untapped performance. "
-            f"This typically means: braking is not hard enough, cornering is too conservative, "
-            f"or there is too much coasting between inputs. For race pace, 55-65% is normal; "
-            f"for qualifying, aim for 65-75%."
+            f"During corners and braking, the car reaches {peak_g:.2f}g peak, but spends only "
+            f"{util:.1f}% of that time above 80% of its own peak. "
+            f"This means most corners are being driven well below the car's capability — "
+            f"either entry speed is too low, apex is taken too cautiously, or exits are lifted early."
         ),
         action=(
-            "Focus on always being on either brake or throttle — never coasting. "
-            "Brake harder initially (aim for 90% of max), trail-brake deeper, "
-            "and apply throttle earlier on exit."
+            "Trust the car's grip — it has more than you're using. "
+            "Carry more entry speed into corners, hold throttle longer on exit, "
+            "and brake later/harder to spend more time near the grip limit."
         ),
         computed_delta_s=estimated_loss,
         computed_value=util,
-        reference_value=QUALIFYING_TARGET,
+        reference_value=TARGET,
         unit="percent",
     ))
     return verdicts
@@ -774,8 +764,9 @@ def rule_insufficient_acceleration(straight: StraightAnalysis) -> list[Verdict]:
     length_factor = min(straight.segment.length_m / 400.0, 1.0)
     expected_throttle = min(60.0 + length_factor * 30.0, 90.0)
 
-    if straight.time_at_full_throttle_pct < expected_throttle:
-        throttle_deficit = expected_throttle - straight.time_at_full_throttle_pct
+    throttle_deficit = expected_throttle - straight.time_at_full_throttle_pct
+    # Require at least 3% gap — filters measurement noise and marginal cases
+    if throttle_deficit >= 3.0:
         # Physics: partial throttle means less acceleration over time
         # lost_accel ≈ deficit_fraction × typical_accel_potential (0.4g ≈ 3.9 m/s²)
         # avg_speed_deficit = lost_accel × time / 2  (linear build-up)
@@ -868,8 +859,6 @@ def compute_all_verdicts(
     corner_analyses: dict[int, list[CornerAnalysis]],
     straight_analyses: dict[int, list[StraightAnalysis]],
     dynamics_analyses: dict[int, VehicleDynamicsAnalysis],
-    tire_analyses: dict[int, TireAnalysis],
-    brake_analyses: dict[int, BrakeAnalysis],
     segments: list[TrackSegment] | None = None,
     lap_start_times: dict[int, float] | None = None,
     ref_corners: list[CornerAnalysis] | None = None,

@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, MessageSquare, Zap } from "lucide-react";
+import { ChevronDown, Zap, Sparkles, Cpu } from "lucide-react";
 import { useState } from "react";
 import type { SessionSummary } from "@/data/types";
 
@@ -8,63 +8,140 @@ interface CoachPanelProps {
 }
 
 export default function CoachPanel({ summary }: CoachPanelProps) {
-  const [expanded, setExpanded] = useState(false);
+  const [detExpanded, setDetExpanded] = useState(false);
+  const [aiExpanded, setAiExpanded] = useState(false);
   const coaching = summary.deterministic_coaching;
-  const top3 = coaching.top_3_actions;
+  const genCoaching = summary.generative_coaching;
 
   return (
-    <div className="glass-panel overflow-hidden">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-foreground/[0.02] transition-colors"
-      >
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <MessageSquare className="w-3 h-3" />
-          <span className="uppercase tracking-[0.15em] font-semibold">AI Coach Summary</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-[11px] font-semibold text-racing-red">
-            {coaching.total_estimated_gain_s.toFixed(1)}s gain
-          </span>
-          <motion.span animate={{ rotate: expanded ? 180 : 0 }} transition={{ duration: 0.2 }}>
-            <ChevronDown className="w-3 h-3 text-muted-foreground" />
-          </motion.span>
-        </div>
-      </button>
+    <div className="space-y-2">
+      {/* ── Deterministic (Physics) Coach ── */}
+      <div className="glass-panel overflow-hidden">
+        <button
+          onClick={() => setDetExpanded(!detExpanded)}
+          className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-foreground/[0.02] transition-colors"
+        >
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Cpu className="w-3 h-3" />
+            <span className="uppercase tracking-[0.15em] font-semibold">Physics Analysis</span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 font-mono uppercase tracking-wider">
+              Measured
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[11px] font-semibold text-sector-green">
+              -{coaching.total_estimated_gain_s.toFixed(2)}s
+            </span>
+            <motion.span
+              animate={{ rotate: detExpanded ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ChevronDown className="w-3 h-3 text-muted-foreground" />
+            </motion.span>
+          </div>
+        </button>
 
-      <AnimatePresence initial={false}>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="overflow-hidden"
-          >
-            <div className="px-3 pb-3 border-t border-border pt-2 space-y-3">
-              <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-                Top 3 Priority Actions
-              </p>
-
-              {top3.map((action, i) => (
-                <div key={i} className="flex gap-2.5">
-                  <div className="flex-shrink-0 w-5 h-5 rounded-full bg-racing-red/15 flex items-center justify-center mt-0.5">
-                    <span className="font-mono text-[10px] font-bold text-racing-red">{i + 1}</span>
-                  </div>
-                  <p className="text-xs text-foreground/85 leading-relaxed">{action}</p>
-                </div>
-              ))}
-
-              <div className="flex items-center gap-1.5 pt-1 border-t border-border">
-                <Zap className="w-3 h-3 text-sector-yellow" />
-                <p className="text-[10px] text-muted-foreground">
-                  {coaching.total_verdicts} issues found across session &middot; Est. total gain: {coaching.total_estimated_gain_s.toFixed(2)}s
+        <AnimatePresence initial={false}>
+          {detExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="overflow-hidden"
+            >
+              <div className="px-3 pb-3 border-t border-border pt-2 space-y-3">
+                <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+                  Top Priority Actions
                 </p>
+
+                {coaching.top_3_actions.map((action, i) => (
+                  <div key={i} className="flex gap-2.5">
+                    <div className="flex-shrink-0 w-5 h-5 rounded-full bg-racing-red/15 flex items-center justify-center mt-0.5">
+                      <span className="font-mono text-[10px] font-bold text-racing-red">
+                        {i + 1}
+                      </span>
+                    </div>
+                    <p className="text-xs text-foreground/85 leading-relaxed">{action}</p>
+                  </div>
+                ))}
+
+                <div className="flex items-center gap-1.5 pt-2 mt-2 border-t border-border">
+                  <Zap className="w-3 h-3 text-sector-yellow" />
+                  <p className="text-[10px] text-muted-foreground">
+                    {coaching.total_verdicts} issues found &middot; Est. gain:{" "}
+                    -{coaching.total_estimated_gain_s.toFixed(2)}s
+                  </p>
+                </div>
               </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* ── GenAI Coach (only if available) ── */}
+      {genCoaching && (
+        <div className="glass-panel overflow-hidden border-purple-500/20">
+          <button
+            onClick={() => setAiExpanded(!aiExpanded)}
+            className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-foreground/[0.02] transition-colors"
+          >
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Sparkles className="w-3 h-3 text-purple-400" />
+              <span className="uppercase tracking-[0.15em] font-semibold">AI Coach</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 font-mono uppercase tracking-wider">
+                GenAI
+              </span>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <motion.span
+              animate={{ rotate: aiExpanded ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ChevronDown className="w-3 h-3 text-muted-foreground" />
+            </motion.span>
+          </button>
+
+          <AnimatePresence initial={false}>
+            {aiExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="overflow-hidden"
+              >
+                <div className="px-3 pb-3 border-t border-purple-500/20 pt-2 space-y-3">
+                  {genCoaching.overview && (
+                    <div className="bg-purple-500/5 border border-purple-500/15 rounded-md p-2.5">
+                      <p className="text-[11px] text-foreground/90 leading-relaxed">
+                        {genCoaching.overview}
+                      </p>
+                    </div>
+                  )}
+
+                  {genCoaching.top_3_actions && genCoaching.top_3_actions.length > 0 && (
+                    <>
+                      <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+                        AI Recommendations
+                      </p>
+                      {genCoaching.top_3_actions.map((action, i) => (
+                        <div key={i} className="flex gap-2.5">
+                          <div className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-500/15 flex items-center justify-center mt-0.5">
+                            <span className="font-mono text-[10px] font-bold text-purple-400">
+                              {i + 1}
+                            </span>
+                          </div>
+                          <p className="text-xs text-foreground/85 leading-relaxed">{action}</p>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
     </div>
   );
 }

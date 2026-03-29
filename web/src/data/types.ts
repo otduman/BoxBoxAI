@@ -29,12 +29,16 @@ export interface VizMarker {
   x: number;
   y: number;
   segment: string;
+  lap?: number;
   category: string;
   severity: "high" | "medium" | "low" | "critical";
   finding: string;
   reasoning: string;
   action: string;
   time_impact_s: number;
+  measured?: number;
+  target?: number;
+  unit?: string;
 }
 
 // session_summary.json
@@ -60,6 +64,11 @@ export interface SessionSummary {
   deterministic_coaching: {
     total_verdicts: number;
     total_estimated_gain_s: number;
+    top_3_actions: string[];
+    verdicts: Verdict[];
+  };
+  generative_coaching?: {
+    overview: string;
     top_3_actions: string[];
     verdicts: Verdict[];
   };

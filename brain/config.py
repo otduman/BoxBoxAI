@@ -51,9 +51,9 @@ class DriverProfile:
 # ---------------------------------------------------------------------------
 PROFILE_AUTONOMOUS = DriverProfile(
     name="autonomous",
-    lockup_lambda_threshold=-3.0,      # Raw units; ~3% beyond normal operating range
-    wheelspin_lambda_threshold=5.0,    # Raw units; beyond peak traction slip
-    min_event_duration_s=0.02,         # 20ms — controller reacts this fast
+    lockup_lambda_threshold=-5.0,      # Raw units; brief -3 to -5% is aggressive but controlled braking
+    wheelspin_lambda_threshold=8.0,    # Raw units; 5-8% is normal traction utilization under power
+    min_event_duration_s=0.06,         # 60ms — 3 samples at 50Hz; filters single-sample noise
     oversteer_beta_threshold_rad=0.08, # ~4.6 deg — allows normal racing rotation
     slip_angle_warning_rad=0.15,       # ~8.6 deg — race tires peak at 8-12 deg
     coast_time_flag_s=0.05,            # 50ms — any coast is notable for a controller
@@ -118,7 +118,7 @@ SMOOTHING_ORDER = 2
 MEDIAN_FILTER_WINDOW = 5
 
 # Braking Detection
-BRAKE_ON_THRESHOLD_PA = 100_000    # 1 bar — light brake touch detection
+BRAKE_ON_THRESHOLD_PA = 300_000    # 1 bar — light brake touch detection
 BRAKE_OFF_THRESHOLD_PA = 50_000    # 0.5 bar — hysteresis for release
 BRAKE_TRAIL_FRACTION = 0.30        # 30% of peak for trail-brake detection
 
@@ -137,8 +137,8 @@ CHICANE_MERGE_GAP_M = 20.0
 
 # Vehicle Dynamics (kept as module-level for backward compat, but prefer profile)
 OVERSTEER_BETA_THRESHOLD_RAD = 0.08  # ~4.6 deg — allows normal racing rotation
-LOCKUP_LAMBDA_THRESHOLD = -3.0
-WHEELSPIN_LAMBDA_THRESHOLD = 5.0
+LOCKUP_LAMBDA_THRESHOLD = -5.0
+WHEELSPIN_LAMBDA_THRESHOLD = 8.0
 SLIP_ANGLE_WARNING_RAD = 0.15        # ~8.6 deg — race tire peak zone
 MAX_LATERAL_G_ESTIMATE = 6.0         # F1-level downforce car peak lateral g
 

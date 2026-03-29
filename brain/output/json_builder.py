@@ -178,6 +178,7 @@ def _serialize_corner(ca: CornerAnalysis) -> dict:
     return {
         "segment_id": ca.segment.segment_id,
         "direction": ca.segment.direction,
+        "archetype": ca.archetype,
         "entry_speed_kmh": round(ca.entry_speed_kmh, 1),
         "time_in_corner_s": round(ca.time_in_corner_s, 3),
         "braking": {
@@ -204,6 +205,7 @@ def _serialize_corner(ca: CornerAnalysis) -> dict:
             "coast_time_s": round(ca.exit.coast_time_s, 3),
             "rear_wheelspin": ca.exit.rear_wheelspin,
         },
+        "trace": ca.trace,
     }
 
 

@@ -1,11 +1,11 @@
 import { useRef, useMemo, useEffect, useCallback, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
 import type { VizData } from "@/data/types";
 
 /* Unified severity palette — used for BOTH marker dots AND segment coloring */
 const SEV_COLORS: Record<string, string> = {
-  critical: "#dc2626",
+  critical: "#e10600",
   high: "#e10600",
   medium: "#f97316",
   low: "#eab308",
@@ -17,6 +17,9 @@ const MIN_ZOOM = 0.4;
 const MAX_ZOOM = 16;
 const ZOOM_STEP = 1.03;
 const DRAG_THRESHOLD_PX = 4;
+const SIDEBAR_WIDTH_PX = 420;  // must match Analysis.tsx md:w-[420px]
+const TRACK_PADDING_PX = 35;
+const MD_BREAKPOINT = 768;
 
 /* ────────── geometry helpers ────────── */
 function buildTrackRibbon(
@@ -139,8 +142,8 @@ function drawDirectionArrows(
     const py = dirX;
     
     // Size in world meters
-    const length = 4.5;
-    const width = 2.5;
+    const length = 7;
+    const width = 4;
     
     const [tipX, tipY] = toScreen(p2[0], p2[1]);
     const [blX, blY] = toScreen(p2[0] - dirX * length + px * width, p2[1] - dirY * length + py * width);
@@ -155,6 +158,80 @@ function drawDirectionArrows(
     ctx.closePath();
     ctx.fill();
   }
+}
+
+function drawWorldGrid(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  toScreen: ToScreen,
+  toWorld: (sx: number, sy: number) => [number, number],
+  scale: number
+) {
+  // Adaptive spacing based on zoom
+  const pxPerMeter = scale;
+  let spacing = 200;
+  if (pxPerMeter > 1.5) spacing = 100;
+  if (pxPerMeter > 4) spacing = 50;
+  if (pxPerMeter > 10) spacing = 20;
+
+  // Visible world bounds (all 4 screen corners → world)
+  const c0 = toWorld(0, 0);
+  const c1 = toWorld(w, 0);
+  const c2 = toWorld(w, h);
+  const c3 = toWorld(0, h);
+  const wMinX = Math.min(c0[0], c1[0], c2[0], c3[0]);
+  const wMaxX = Math.max(c0[0], c1[0], c2[0], c3[0]);
+  const wMinY = Math.min(c0[1], c1[1], c2[1], c3[1]);
+  const wMaxY = Math.max(c0[1], c1[1], c2[1], c3[1]);
+
+  // Draw dot grid at intersections
+  const dotR = Math.max(0.5, Math.min(1.5, pxPerMeter * 0.3));
+  ctx.fillStyle = "rgba(255,255,255,0.04)";
+  const startX = Math.floor(wMinX / spacing) * spacing;
+  const startY = Math.floor(wMinY / spacing) * spacing;
+  for (let wx = startX; wx <= wMaxX; wx += spacing) {
+    for (let wy = startY; wy <= wMaxY; wy += spacing) {
+      const [sx, sy] = toScreen(wx, wy);
+      if (sx < -10 || sx > w + 10 || sy < -10 || sy > h + 10) continue;
+      ctx.beginPath();
+      ctx.arc(sx, sy, dotR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+/* ────────── auto-rotation via PCA ────────── */
+function computeOptimalRotation(points: [number, number][]): number {
+  const n = points.length;
+  if (n < 10) return 0;
+  let cx = 0, cy = 0;
+  for (const [x, y] of points) { cx += x; cy += y; }
+  cx /= n; cy /= n;
+  let cxx = 0, cxy = 0, cyy = 0;
+  for (const [x, y] of points) {
+    const dx = x - cx, dy = y - cy;
+    cxx += dx * dx; cxy += dx * dy; cyy += dy * dy;
+  }
+  // Principal axis angle
+  const angle = Math.atan2(2 * cxy, cxx - cyy) / 2;
+
+  // Pick between angle and angle+90° — whichever makes bbox wider than tall
+  const testAr = (a: number) => {
+    const c = Math.cos(a), s = Math.sin(a);
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const [x, y] of points) {
+      const dx = x - cx, dy = y - cy;
+      const rx = dx * c - dy * s, ry = dx * s + dy * c;
+      if (rx < minX) minX = rx; if (rx > maxX) maxX = rx;
+      if (ry < minY) minY = ry; if (ry > maxY) maxY = ry;
+    }
+    return (maxX - minX) / ((maxY - minY) || 1);
+  };
+  const ar1 = testAr(angle);
+  const ar2 = testAr(angle + Math.PI / 2);
+  // Prefer the orientation whose aspect ratio is wider (landscape-friendly)
+  return ar1 >= ar2 ? angle : angle + Math.PI / 2;
 }
 
 /* ────────── component ────────── */
@@ -200,27 +277,46 @@ export default function Track3D({
     [data]
   );
 
-  // Bounding box of all geometry
+  // PCA-based optimal rotation for best screen fit
+  const optimalRotation = useMemo(
+    () => computeOptimalRotation(roadLine),
+    [roadLine]
+  );
+
+  // Bounding box of all geometry — computed in rotated frame around centroid
   const bounds = useMemo(() => {
-    let minX = Infinity,
-      maxX = -Infinity,
-      minY = Infinity,
-      maxY = -Infinity;
-    for (const [x, y] of roadLine) {
-      if (x < minX) minX = x;
-      if (x > maxX) maxX = x;
-      if (y < minY) minY = y;
-      if (y > maxY) maxY = y;
-    }
-    for (const m of data.markers) {
-      if (m.x < minX) minX = m.x;
-      if (m.x > maxX) maxX = m.x;
-      if (m.y < minY) minY = m.y;
-      if (m.y > maxY) maxY = m.y;
-    }
-    const size = Math.max(maxX - minX, maxY - minY) * 1.15;
-    return { cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, size };
-  }, [roadLine, data.markers]);
+    // World-space centroid as camera pivot
+    let sumX = 0, sumY = 0;
+    for (const [x, y] of roadLine) { sumX += x; sumY += y; }
+    const cx = sumX / roadLine.length;
+    const cy = sumY / roadLine.length;
+
+    // Compute extents in the rotated frame around centroid
+    const cosR = Math.cos(optimalRotation);
+    const sinR = Math.sin(optimalRotation);
+    let minRX = Infinity, maxRX = -Infinity, minRY = Infinity, maxRY = -Infinity;
+    const project = (wx: number, wy: number) => {
+      const dx = wx - cx, dy = wy - cy;
+      const rx = dx * cosR - dy * sinR;
+      const ry = dx * sinR + dy * cosR;
+      if (rx < minRX) minRX = rx; if (rx > maxRX) maxRX = rx;
+      if (ry < minRY) minRY = ry; if (ry > maxRY) maxRY = ry;
+    };
+    for (const [x, y] of roadLine) project(x, y);
+    for (const m of data.markers) project(m.x, m.y);
+
+    // If the rotated bbox is off-center relative to centroid, adjust
+    // so camera targets the true visual center
+    const offsetRX = (minRX + maxRX) / 2;
+    const offsetRY = (minRY + maxRY) / 2;
+    // Inverse-rotate offset back to world space and shift centroid
+    const adjCx = cx + offsetRX * cosR + offsetRY * sinR;
+    const adjCy = cy - offsetRX * sinR + offsetRY * cosR;
+
+    const width = (maxRX - minRX) * 1.18;
+    const height = (maxRY - minRY) * 1.18;
+    return { cx: adjCx, cy: adjCy, width, height };
+  }, [roadLine, data.markers, optimalRotation]);
 
   const trackRibbon = useMemo(
     () => buildTrackRibbon(roadLine, 7),
@@ -273,12 +369,22 @@ export default function Track3D({
   }, [data.segments, roadLine]);
 
   /* ── camera + animation refs ── */
-  const cam = useRef<Cam>({
-    cx: bounds.cx,
-    cy: bounds.cy,
-    zoom: 1,
-    rotation: 0,
-  });
+  // Initial position includes sidebar offset to avoid first-frame flash
+  const cam = useRef<Cam>((() => {
+    const wrap = wrapRef.current;
+    const w = wrap?.clientWidth ?? 800;
+    const h = wrap?.clientHeight ?? 600;
+    const baseScale = Math.min((w - TRACK_PADDING_PX * 2) / bounds.width, (h - TRACK_PADDING_PX * 2) / bounds.height);
+    const cosR = Math.cos(optimalRotation);
+    const sinR = Math.sin(optimalRotation);
+    const offset = w >= MD_BREAKPOINT ? SIDEBAR_WIDTH_PX / (2 * baseScale) : 0;
+    return {
+      cx: bounds.cx + offset * cosR,
+      cy: bounds.cy - offset * sinR,
+      zoom: 1,
+      rotation: optimalRotation,
+    };
+  })());
   const animFrom = useRef<Cam | null>(null);
   const animTo = useRef<Cam | null>(null);
   const animStart = useRef(0);
@@ -316,13 +422,12 @@ export default function Track3D({
   /* ── transforms ── */
   const getBaseScale = useCallback(
     (w: number, h: number) => {
-      const pad = 60;
       return Math.min(
-        (w - pad * 2) / bounds.size,
-        (h - pad * 2) / bounds.size
+        (w - TRACK_PADDING_PX * 2) / bounds.width,
+        (h - TRACK_PADDING_PX * 2) / bounds.height
       );
     },
-    [bounds.size]
+    [bounds.width, bounds.height]
   );
 
   const makeTransform = useCallback(
@@ -355,7 +460,13 @@ export default function Track3D({
 
   /* ── animation control ── */
   const startAnim = useCallback((target: Cam) => {
-    animFrom.current = { ...cam.current };
+    const from = { ...cam.current };
+    // Normalize rotation for shortest-path interpolation
+    let dr = target.rotation - from.rotation;
+    while (dr > Math.PI) dr -= Math.PI * 2;
+    while (dr < -Math.PI) dr += Math.PI * 2;
+    target = { ...target, rotation: from.rotation + dr };
+    animFrom.current = from;
     animTo.current = target;
     animStart.current = performance.now();
     orbitActive.current = false;
@@ -381,21 +492,44 @@ export default function Track3D({
 
   /* ── react to marker selection ── */
   const isLapLevel = activeMarkerIdx !== null && data.markers[activeMarkerIdx]?.segment === "Lap-level";
+  const isLapLevelRef = useRef(false);
+  isLapLevelRef.current = isLapLevel;
+
+  // Sidebar compensation helper: shift camera right (in rotated frame)
+  // so the visible area (left of sidebar) is centered on the target
+  const sidebarShift = useCallback(
+    (targetX: number, targetY: number, zoom: number): { cx: number; cy: number } => {
+      const wrap = wrapRef.current;
+      const w = wrap?.clientWidth ?? 1;
+      if (w < MD_BREAKPOINT) return { cx: targetX, cy: targetY }; // mobile: no sidebar
+      const scale = getBaseScale(w, wrap?.clientHeight ?? 1) * zoom;
+      const cosR = Math.cos(optimalRotation);
+      const sinR = Math.sin(optimalRotation);
+      const offset = SIDEBAR_WIDTH_PX / (2 * scale);
+      return {
+        cx: targetX + offset * cosR,
+        cy: targetY - offset * sinR,
+      };
+    },
+    [getBaseScale, optimalRotation]
+  );
 
   useEffect(() => {
+    const { cx: oCx, cy: oCy } = sidebarShift(bounds.cx, bounds.cy, 1);
+    const overview: Cam = { cx: oCx, cy: oCy, zoom: 1, rotation: optimalRotation };
     if (activeMarkerIdx !== null) {
       const m = data.markers[activeMarkerIdx];
       if (!m) return;
       if (m.segment === "Lap-level") {
-        // Lap-level: animate back to overview with a slow spin
-        startAnim({ cx: bounds.cx, cy: bounds.cy, zoom: 1, rotation: 0 });
+        startAnim(overview);
       } else {
-        startAnim({ cx: m.x, cy: m.y, zoom: 4, rotation: 0 });
+        const { cx, cy } = sidebarShift(m.x, m.y, 4);
+        startAnim({ cx, cy, zoom: 4, rotation: optimalRotation });
       }
     } else {
-      startAnim({ cx: bounds.cx, cy: bounds.cy, zoom: 1, rotation: 0 });
+      startAnim(overview);
     }
-  }, [activeMarkerIdx, data.markers, bounds, startAnim]);
+  }, [activeMarkerIdx, data.markers, bounds, startAnim, optimalRotation, sidebarShift]);
 
   /* ── pixel → world delta ── */
   const pixelToWorld = useCallback(
@@ -848,7 +982,8 @@ export default function Track3D({
         if (t >= 1) {
           animFrom.current = null;
           animTo.current = null;
-          if (activeRef.current !== null) {
+          // Only orbit for non-lap-level markers (lap-level stays at overview)
+          if (activeRef.current !== null && !isLapLevelRef.current) {
             orbitActive.current = true;
           }
         }
@@ -899,6 +1034,10 @@ export default function Track3D({
       ctx.fillStyle = vig;
       ctx.fillRect(0, 0, w, h);
 
+      // World-space dot grid (moves with pan/zoom for depth reference)
+      const { toWorld, scale: camScale } = makeTransform(w, h, c);
+      drawWorldGrid(ctx, w, h, toScreen, toWorld, camScale);
+
       // Track surface
       drawRibbon(ctx, trackRibbon.left, trackRibbon.right, "#141420", toScreen);
 
@@ -906,7 +1045,15 @@ export default function Track3D({
       drawPolyline(ctx, trackRibbon.left, "#2a2a40", 1.2, toScreen);
       drawPolyline(ctx, trackRibbon.right, "#2a2a40", 1.2, toScreen);
 
-      // F1-style segment coloring — sorted by severity so red draws on top
+      // Base green layer: entire track colored green so no gaps
+      ctx.globalAlpha = 0.15;
+      drawPolyline(ctx, roadLine, SEG_COLORS.green, 10, toScreen);
+      ctx.globalAlpha = 0.5;
+      drawPolyline(ctx, roadLine, SEG_COLORS.green, 4, toScreen);
+      ctx.globalAlpha = 1;
+      drawPolyline(ctx, roadLine, SEG_COLORS.green, 1.8, toScreen);
+
+      // F1-style segment coloring — only non-green segments drawn on top
       const sortedSlices = [...segmentSlices].sort((a, b) => {
         const ra = SEG_RANK[segmentHealth[a.id] || SEG_COLORS.green] ?? 0;
         const rb = SEG_RANK[segmentHealth[b.id] || SEG_COLORS.green] ?? 0;
@@ -914,6 +1061,7 @@ export default function Track3D({
       });
       for (const slice of sortedSlices) {
         const color = segmentHealth[slice.id] || SEG_COLORS.green;
+        if (color === SEG_COLORS.green) continue; // base layer already green
         const pts = roadLine.slice(slice.start, slice.end + 1);
         if (pts.length < 2) continue;
         // Glow layer
@@ -927,7 +1075,38 @@ export default function Track3D({
       }
 
       // Direction arrows
-      drawDirectionArrows(ctx, roadLine, "rgba(255, 255, 255, 0.4)", toScreen);
+      drawDirectionArrows(ctx, roadLine, "rgba(255, 255, 255, 0.65)", toScreen);
+
+      // START/FINISH marker — white line across track + label
+      {
+        const sp = roadLine[0];
+        const np = roadLine[Math.min(5, roadLine.length - 1)];
+        const sdx = np[0] - sp[0], sdy = np[1] - sp[1];
+        const slen = Math.sqrt(sdx * sdx + sdy * sdy) || 1;
+        const spx = -sdy / slen, spy = sdx / slen;
+        const sOut = ((sp[0] + spx * 40 - bounds.cx) ** 2 + (sp[1] + spy * 40 - bounds.cy) ** 2) >=
+          ((sp[0] - spx * 40 - bounds.cx) ** 2 + (sp[1] - spy * 40 - bounds.cy) ** 2) ? 1 : -1;
+        const [x1, y1] = toScreen(sp[0] + spx * 14, sp[1] + spy * 14);
+        const [x2, y2] = toScreen(sp[0] - spx * 14, sp[1] - spy * 14);
+        const [lx, ly] = toScreen(sp[0] + spx * 28 * sOut, sp[1] + spy * 28 * sOut);
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.strokeStyle = "rgba(255,255,255,0.9)";
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([]);
+        ctx.stroke();
+        const sFontSize = Math.max(8, Math.min(11, 9 * Math.sqrt(c.zoom)));
+        ctx.font = `600 ${sFontSize}px 'Titillium Web', sans-serif`;
+        ctx.strokeStyle = "rgba(0,0,0,0.6)";
+        ctx.lineWidth = 3;
+        ctx.fillStyle = "rgba(255,255,255,0.75)";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.strokeText("S/F", lx, ly);
+        ctx.fillText("S/F", lx, ly);
+        ctx.textBaseline = "alphabetic";
+      }
 
       // Lap-level pulse: when a lap-level verdict is active, pulse the whole track
       if (isLapLevel) {
@@ -956,19 +1135,32 @@ export default function Track3D({
             const d = (roadLine[j][0] - ax) ** 2 + (roadLine[j][1] - ay) ** 2;
             if (d < bestDist) { bestDist = d; bestIdx = j; }
           }
-          // Compute tangent from neighbors
-          const prev = Math.max(0, bestIdx - 3);
-          const next = Math.min(roadLine.length - 1, bestIdx + 3);
-          const tdx = roadLine[next][0] - roadLine[prev][0];
-          const tdy = roadLine[next][1] - roadLine[prev][1];
+          // Compute tangent + curvature direction for outside-of-corner placement
+          const spread = 20;
+          const pIdx = Math.max(0, bestIdx - spread);
+          const nIdx = Math.min(roadLine.length - 1, bestIdx + spread);
+          const tdx = roadLine[nIdx][0] - roadLine[pIdx][0];
+          const tdy = roadLine[nIdx][1] - roadLine[pIdx][1];
           const tlen = Math.sqrt(tdx * tdx + tdy * tdy) || 1;
           const perpX = -tdy / tlen;
           const perpY = tdx / tlen;
-          // Pick the outward side (away from bounds center)
-          const outward = ((ax + perpX * 30 - bounds.cx) ** 2 + (ay + perpY * 30 - bounds.cy) ** 2) >=
-            ((ax - perpX * 30 - bounds.cx) ** 2 + (ay - perpY * 30 - bounds.cy) ** 2) ? 1 : -1;
-          const lx = ax + perpX * 30 * outward;
-          const ly = ay + perpY * 30 * outward;
+          // Use curvature direction: cross product of two tangent segments
+          const mIdx = bestIdx;
+          const p0 = roadLine[Math.max(0, mIdx - spread)];
+          const p1 = roadLine[mIdx];
+          const p2 = roadLine[Math.min(roadLine.length - 1, mIdx + spread)];
+          const d1x = p1[0] - p0[0], d1y = p1[1] - p0[1];
+          const d2x = p2[0] - p1[0], d2y = p2[1] - p1[1];
+          const cross = d1x * d2y - d1y * d2x;
+          // Label goes on the OUTSIDE of the corner (opposite to center of curvature)
+          // Fallback: if cross is near zero (straight-ish), push away from track centroid
+          const outward = Math.abs(cross) < 0.01
+            ? (((ax + perpX - bounds.cx) ** 2 + (ay + perpY - bounds.cy) ** 2) >=
+               ((ax - perpX - bounds.cx) ** 2 + (ay - perpY - bounds.cy) ** 2) ? 1 : -1)
+            : (cross > 0 ? -1 : 1);
+          const labelOffset = 45;
+          const lx = ax + perpX * labelOffset * outward;
+          const ly = ay + perpY * labelOffset * outward;
           const [sx, sy] = toScreen(lx, ly);
           const fontSize = Math.max(9, Math.min(13, 10 * Math.sqrt(c.zoom)));
           ctx.font = `600 ${fontSize}px 'Titillium Web', sans-serif`;
@@ -986,24 +1178,24 @@ export default function Track3D({
         const color = SEV_COLORS[m.severity] || "#6b7280";
         const isActive = i === activeRef.current;
         const isHov = i === hov;
-        const r = isActive ? 13 : isHov ? 10 : 7;
+        const r = isActive ? 16 : isHov ? 13 : 10;
 
-        // Glow
+        // Glow — use white/neutral so it doesn't clash with segment coloring
         if (isActive || isHov) {
           ctx.beginPath();
-          ctx.arc(sx, sy, r + 8, 0, Math.PI * 2);
-          ctx.fillStyle = color + "25";
+          ctx.arc(sx, sy, r + 10, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(255,255,255,0.08)";
           ctx.fill();
         }
 
-        // Pulse ring
+        // Pulse ring — neutral white to avoid clashing with segment colors
         if (isActive) {
           const pulse = 0.5 + Math.sin(now / 300) * 0.5;
           ctx.beginPath();
-          ctx.arc(sx, sy, r + 12 + pulse * 10, 0, Math.PI * 2);
-          ctx.strokeStyle = color;
-          ctx.globalAlpha = 0.6 - pulse * 0.5;
-          ctx.lineWidth = 1.5;
+          ctx.arc(sx, sy, r + 14 + pulse * 10, 0, Math.PI * 2);
+          ctx.strokeStyle = "rgba(255,255,255,0.7)";
+          ctx.globalAlpha = 0.5 - pulse * 0.4;
+          ctx.lineWidth = 2;
           ctx.stroke();
           ctx.globalAlpha = 1;
         }
@@ -1062,7 +1254,7 @@ export default function Track3D({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
             onClick={() => onMarkerClick(-1)}
-            className="absolute top-4 right-4 glass-panel px-3 py-2 flex items-center gap-2 text-xs font-sans tracking-wider uppercase text-foreground hover:bg-accent transition-colors cursor-pointer"
+            className="absolute top-12 left-4 glass-panel px-3 py-2 flex items-center gap-2 text-xs font-sans tracking-wider uppercase text-foreground hover:bg-accent transition-colors cursor-pointer z-10"
           >
             <RotateCcw className="w-3 h-3" />
             Reset View
@@ -1070,8 +1262,50 @@ export default function Track3D({
         )}
       </AnimatePresence>
 
-      {/* Hover tooltip */}
-      {hoveredIdx >= 0 && (
+      {/* Prev / Next marker navigation */}
+      <AnimatePresence>
+        {isZoomed && !isLapLevel && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 md:left-[calc(50%-210px)] flex items-center gap-1 glass-panel px-2 py-1.5 z-40"
+          >
+            <button
+              onClick={() => {
+                let idx = activeMarkerIdx!;
+                for (let k = 0; k < data.markers.length; k++) {
+                  idx = idx > 0 ? idx - 1 : data.markers.length - 1;
+                  if (data.markers[idx].segment !== "Lap-level") break;
+                }
+                onMarkerClick(idx);
+              }}
+              className="p-1.5 rounded hover:bg-accent transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4 text-foreground" />
+            </button>
+            <span className="text-xs font-mono tracking-wider text-muted-foreground min-w-[48px] text-center">
+              {activeMarkerIdx! + 1} / {data.markers.length}
+            </span>
+            <button
+              onClick={() => {
+                let idx = activeMarkerIdx!;
+                for (let k = 0; k < data.markers.length; k++) {
+                  idx = idx < data.markers.length - 1 ? idx + 1 : 0;
+                  if (data.markers[idx].segment !== "Lap-level") break;
+                }
+                onMarkerClick(idx);
+              }}
+              className="p-1.5 rounded hover:bg-accent transition-colors"
+            >
+              <ChevronRight className="w-4 h-4 text-foreground" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Hover tooltip — hidden when zoomed to avoid overlapping prev/next */}
+      {hoveredIdx >= 0 && !isZoomed && (
         <div
           className="absolute pointer-events-none bg-card/95 border border-border rounded-md px-3 py-2 text-xs max-w-[240px] z-50 shadow-xl"
           style={{ left: "50%", bottom: 16, transform: "translateX(-50%)" }}

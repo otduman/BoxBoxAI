@@ -1,0 +1,1340 @@
+{
+  "session": {
+    "track": "Yas Marina",
+    "source_file": "hackathon_fast_laps.mcap",
+    "total_laps": 1,
+    "laps": [
+      {
+        "lap_number": 0,
+        "duration_s": 74.259
+      }
+    ]
+  },
+  "track_layout": {
+    "total_corners": 7,
+    "total_straights": 6,
+    "segments": [
+      {
+        "id": "Straight_1",
+        "type": "straight",
+        "direction": "straight",
+        "start_m": 2608.3,
+        "end_m": 2674.0,
+        "length_m": 65.7
+      },
+      {
+        "id": "Turn_1",
+        "type": "corner",
+        "direction": "right",
+        "start_m": 2700.2,
+        "end_m": 2794.2,
+        "length_m": 94.1
+      },
+      {
+        "id": "Straight_2",
+        "type": "straight",
+        "direction": "straight",
+        "start_m": 2794.7,
+        "end_m": 3181.9,
+        "length_m": 387.2
+      },
+      {
+        "id": "Turn_2",
+        "type": "corner",
+        "direction": "left",
+        "start_m": 3182.4,
+        "end_m": 3345.3,
+        "length_m": 163.0
+      },
+      {
+        "id": "Straight_3",
+        "type": "straight",
+        "direction": "straight",
+        "start_m": 3345.8,
+        "end_m": 4289.3,
+        "length_m": 943.4
+      },
+      {
+        "id": "Turn_3",
+        "type": "corner",
+        "direction": "right",
+        "start_m": 4289.8,
+        "end_m": 4367.5,
+        "length_m": 77.7
+      },
+      {
+        "id": "Turn_4",
+        "type": "corner",
+        "direction": "left",
+        "start_m": 4401.0,
+        "end_m": 4434.3,
+        "length_m": 33.3
+      },
+      {
+        "id": "Turn_5",
+        "type": "corner",
+        "direction": "right",
+        "start_m": 4475.6,
+        "end_m": 4538.8,
+        "length_m": 63.2
+      },
+      {
+        "id": "Straight_4",
+        "type": "straight",
+        "direction": "straight",
+        "start_m": 1938.6,
+        "end_m": 2259.8,
+        "length_m": 321.2
+      },
+      {
+        "id": "Turn_6",
+        "type": "corner",
+        "direction": "left",
+        "start_m": 2260.3,
+        "end_m": 2307.3,
+        "length_m": 47.0
+      },
+      {
+        "id": "Straight_5",
+        "type": "straight",
+        "direction": "straight",
+        "start_m": 2307.6,
+        "end_m": 2392.1,
+        "length_m": 84.5
+      },
+      {
+        "id": "Turn_7",
+        "type": "corner",
+        "direction": "left",
+        "start_m": 2392.4,
+        "end_m": 2496.2,
+        "length_m": 103.7
+      },
+      {
+        "id": "Straight_6",
+        "type": "straight",
+        "direction": "straight",
+        "start_m": 2496.6,
+        "end_m": 2565.5,
+        "length_m": 68.9
+      }
+    ]
+  },
+  "lap_analyses": {
+    "0": {
+      "lap_number": 0,
+      "duration_s": 74.25939345359802,
+      "corners": [
+        {
+          "segment_id": "Turn_1",
+          "direction": "right",
+          "archetype": "HighSpeed_Right_90Deg",
+          "entry_speed_kmh": 179.4,
+          "time_in_corner_s": 2.161,
+          "braking": {
+            "brake_point_m": 0.0,
+            "peak_pressure_pa": 0.0,
+            "deceleration_g": 0.0,
+            "duration_s": 0.0
+          },
+          "trail_brake": {
+            "active": false,
+            "quality_r2": 0.0,
+            "duration_s": 0.0
+          },
+          "apex": {
+            "speed_kmh": 180.5,
+            "lateral_g": 1.78,
+            "lateral_offset_m": -0.55,
+            "sideslip_rad": 0.0219,
+            "distance_m": 2789.4
+          },
+          "exit": {
+            "throttle_point_m": 2789.4,
+            "exit_speed_kmh": 181.4,
+            "coast_time_s": 0.0,
+            "rear_wheelspin": false
+          },
+          "trace": [
+            {
+              "d": 2687.7,
+              "v": 181.7,
+              "br": 11143.0,
+              "gas": 0.47,
+              "steer": -0.039,
+              "ax": -2.32,
+              "ay": 0.24,
+              "yaw": -0.363,
+              "slip": 0.021
+            },
+            {
+              "d": 2708.9,
+              "v": 178.1,
+              "br": 2571.0,
+              "gas": 0.56,
+              "steer": -0.04,
+              "ax": -1.38,
+              "ay": -6.3,
+              "yaw": -0.411,
+              "slip": 0.019
+            },
+            {
+              "d": 2730.1,
+              "v": 175.5,
+              "br": 0.0,
+              "gas": 0.62,
+              "steer": -0.039,
+              "ax": -0.65,
+              "ay": -12.15,
+              "yaw": -0.413,
+              "slip": 0.018
+            },
+            {
+              "d": 2751.3,
+              "v": 175.6,
+              "br": 3429.0,
+              "gas": 0.6,
+              "steer": -0.036,
+              "ax": 0.11,
+              "ay": -15.41,
+              "yaw": -0.382,
+              "slip": 0.021
+            },
+            {
+              "d": 2771.5,
+              "v": 177.1,
+              "br": 3429.0,
+              "gas": 0.75,
+              "steer": -0.035,
+              "ax": 1.77,
+              "ay": -16.92,
+              "yaw": -0.435,
+              "slip": 0.02
+            },
+            {
+              "d": 2793.8,
+              "v": 181.4,
+              "br": 0.0,
+              "gas": 0.99,
+              "steer": -0.025,
+              "ax": 2.78,
+              "ay": -17.3,
+              "yaw": -0.329,
+              "slip": 0.021
+            },
+            {
+              "d": 2816.1,
+              "v": 186.8,
+              "br": 0.0,
+              "gas": 0.99,
+              "steer": -0.012,
+              "ax": 3.08,
+              "ay": -15.29,
+              "yaw": -0.191,
+              "slip": 0.01
+            },
+            {
+              "d": 2840.6,
+              "v": 192.6,
+              "br": 0.0,
+              "gas": 0.99,
+              "steer": -0.006,
+              "ax": 3.08,
+              "ay": -11.52,
+              "yaw": -0.135,
+              "slip": 0.004
+            },
+            {
+              "d": 2865.9,
+              "v": 198.1,
+              "br": 0.0,
+              "gas": 0.99,
+              "steer": -0.001,
+              "ax": 0.99,
+              "ay": -7.75,
+              "yaw": -0.027,
+              "slip": 0.0
+            },
+            {
+              "d": 2892.9,
+              "v": 200.1,
+              "br": 0.0,
+              "gas": 0.99,
+              "steer": 0.006,
+              "ax": 0.88,
+              "ay": -3.07,
+              "yaw": 0.089,
+              "slip": -0.002
+            }
+          ]
+        },
+        {
+          "segment_id": "Turn_2",
+          "direction": "left",
+          "archetype": "LowSpeed_Left_Hairpin",
+          "entry_speed_kmh": 210.9,
+          "time_in_corner_s": 8.86,
+          "braking": {
+            "brake_point_m": 3172.8,
+            "peak_pressure_pa": 13169429.0,
+            "deceleration_g": 1.76,
+            "duration_s": 3.22
+          },
+          "trail_brake": {
+            "active": true,
+            "quality_r2": 0.86,
+            "duration_s": 0.72
+          },
+          "apex": {
+            "speed_kmh": 66.0,
+            "lateral_g": 1.24,
+            "lateral_offset_m": 0.14,
+            "sideslip_rad": 0.02,
+            "distance_m": 3265.2
+          },
+          "exit": {
+            "throttle_point_m": 3265.2,
+            "exit_speed_kmh": 157.9,
+            "coast_time_s": 0.0,
+            "rear_wheelspin": true
+          },
+          "trace": [
+            {
+              "d": 3172.8,
+              "v": 216.3,
+              "br": 4282286.0,
+              "gas": 0.07,
+              "steer": 0.001,
+              "ax": -8.64,
+              "ay": -0.35,
+              "yaw": 0.01,
+              "slip": 0.002
+            },
+            {
+              "d": 3226.4,
+              "v": 159.5,
+              "br": 13149429.0,
+              "gas": 0.07,
+              "steer": 0.013,
+              "ax": -16.77,
+              "ay": 5.57,
+              "yaw": 0.185,
+              "slip": -0.008
+            },
+            {
+              "d": 3242.5,
+              "v": 99.6,
+              "br": 6948286.0,
+              "gas": 0.07,
+              "steer": 0.044,
+              "ax": -10.2,
+              "ay": 7.76,
+              "yaw": 0.367,
+              "slip": -0.002
+            },
+            {
+              "d": 3258.5,
+              "v": 71.9,
+              "br": 1639429.0,
+              "gas": 0.07,
+              "steer": 0.108,
+              "ax": -3.98,
+              "ay": 11.27,
+              "yaw": 0.618,
+              "slip": 0.016
+            },
+            {
+              "d": 3267.2,
+              "v": 66.7,
+              "br": 0.0,
+              "gas": 0.45,
+              "steer": 0.119,
+              "ax": 0.79,
+              "ay": 11.82,
+              "yaw": 0.596,
+              "slip": 0.019
+            },
+            {
+              "d": 3276.9,
+              "v": 88.1,
+              "br": 0.0,
+              "gas": 0.77,
+              "steer": 0.044,
+              "ax": 8.7,
+              "ay": 10.03,
+              "yaw": 0.364,
+              "slip": -0.002
+            },
+            {
+              "d": 3293.9,
+              "v": 122.7,
+              "br": 0.0,
+              "gas": 0.99,
+              "steer": 0.013,
+              "ax": 5.41,
+              "ay": 5.72,
+              "yaw": 0.108,
+              "slip": -0.005
+            },
+            {
+              "d": 3327.9,
+              "v": 149.6,
+              "br": 0.0,
+              "gas": 0.99,
+              "steer": 0.001,
+              "ax": 5.68,
+              "ay": 3.0,
+              "yaw": 0.026,
+              "slip": -0.001
+            },
+            {
+              "d": 3382.9,
+              "v": 169.8,
+              "br": 0.0,
+              "gas": 0.99,
+              "steer": -0.001,
+              "ax": 4.21,
+              "ay": -0.2,
+              "yaw": 0.0,
+              "slip": -0.001
+            },
+            {
+              "d": 3445.0,
+              "v": 187.9,
+              "br": 0.0,
+              "gas": 0.99,
+              "steer": 0.0,
+              "ax": 3.23,
+              "ay": -0.95,
+              "yaw": -0.017,
+              "slip": -0.003
+            }
+          ]
+        },
+        {
+          "segment_id": "Turn_3",
+          "direction": "right",
+          "archetype": "LowSpeed_Right_Hairpin",
+          "entry_speed_kmh": 200.3,
+          "time_in_corner_s": 8.04,
+          "braking": {
+            "brake_point_m": 4280.2,
+            "peak_pressure_pa": 14501143.0,
+            "deceleration_g": 1.99,
+            "duration_s": 2.8
+          },
+          "trail_brake": {
+            "active": true,
+            "quality_r2": 0.89,
+            "duration_s": 0.94
+          },
+          "apex": {
+            "speed_kmh": 99.0,
+            "lateral_g": 1.2,
+            "lateral_offset_m": -0.14,
+            "sideslip_rad": 0.0096,
+            "distance_m": 4363.5
+          },
+          "exit": {
+            "throttle_point_m": 4363.5,
+            "exit_speed_kmh": 106.7,
+            "coast_time_s": 0.0,
+            "rear_wheelspin": false
+          },
+          "trace": [
+            {
+              "d": 4280.2,
+              "v": 210.2,
+              "br": 11304000.0,
+              "gas": 0.07,
+              "steer": -0.002,
+              "ax": -14.9,
+              "ay": -1.11,
+              "yaw": -0.03,
+              "slip": 0.001
+            },
+            {
+              "d": 4319.3,
+              "v": 130.9,
+              "br": 11922286.0,
+              "gas": 0.58,
+              "steer": 0.01,
+              "ax": -16.14,
+              "ay": 1.04,
+              "yaw": 0.099,
+              "slip": -0.003
+            },
+            {
+              "d": 4336.7,
+              "v": 78.5,
+              "br": 4839429.0,
+              "gas": 0.09,
+              "steer": 0.063,
+              "ax": -8.46,
+              "ay": 5.63,
+              "yaw": 0.381,
+              "slip": 0.002
+            },
+            {
+              "d": 4336.8,
+              "v": 56.4,
+              "br": 3429.0,
+              "gas": 0.07,
+              "steer": 0.152,
+              "ax": -2.8,
+              "ay": 9.73,
+              "yaw": 0.661,
+              "slip": 0.034
+            },
+            {
+              "d": 4338.1,
+              "v": 59.7,
+              "br": 0.0,
+              "gas": 0.68,
+              "steer": 0.112,
+              "ax": 2.54,
+              "ay": 9.04,
+              "yaw": 0.454,
+              "slip": 0.023
+            },
+            {
+              "d": 4348.4,
+              "v": 88.1,
+              "br": 286857.0,
+              "gas": 0.57,
+              "steer": 0.06,
+              "ax": 8.35,
+              "ay": 8.12,
+              "yaw": 0.416,
+              "slip": -0.003
+            },
+            {
+              "d": 4361.5,
+              "v": 97.3,
+              "br": 0.0,
+              "gas": 0.67,
+              "steer": 0.066,
+              "ax": 2.46,
+              "ay": 11.77,
+              "yaw": 0.493,
+              "slip": -0.006
+            },
+            {
+              "d": 4376.0,
+              "v": 124.2,
+              "br": 0.0,
+              "gas": 0.68,
+              "steer": -0.019,
+              "ax": 3.88,
+              "ay": 5.57,
+              "yaw": -0.14,
+              "slip": -0.003
+            },
+            {
+              "d": 4398.5,
+              "v": 129.8,
+              "br": 8286.0,
+              "gas": 0.35,
+              "steer": -0.058,
+              "ax": -1.02,
+              "ay": -10.57,
+              "yaw": -0.558,
+              "slip": 0.012
+            },
+            {
+              "d": 4467.4,
+              "v": 129.2,
+              "br": 0.0,
+              "gas": 0.73,
+              "steer": -0.044,
+              "ax": 1.99,
+              "ay": -13.93,
+              "yaw": -0.333,
+              "slip": 0.007
+            }
+          ]
+        },
+        {
+          "segment_id": "Turn_4",
+          "direction": "left",
+          "archetype": "MidSpeed_Left_90Deg",
+          "entry_speed_kmh": 129.6,
+          "time_in_corner_s": 0.26,
+          "braking": {
+            "brake_point_m": 0.0,
+            "peak_pressure_pa": 0.0,
+            "deceleration_g": 0.0,
+            "duration_s": 0.0
+          },
+          "trail_brake": {
+            "active": false,
+            "quality_r2": 0.0,
+            "duration_s": 0.0
+          },
+          "apex": {
+            "speed_kmh": 129.1,
+            "lateral_g": 1.35,
+            "lateral_offset_m": -0.14,
+            "sideslip_rad": 0.0108,
+            "distance_m": 4434.3
+          },
+          "exit": {
+            "throttle_point_m": 4434.3,
+            "exit_speed_kmh": 164.4,
+            "coast_time_s": 0.0,
+            "rear_wheelspin": false
+          },
+          "trace": [
+            {
+              "d": 4384.5,
+              "v": 131.7,
+              "br": -1429.0,
+              "gas": 0.46,
+              "steer": -0.05,
+              "ax": 1.09,
+              "ay": -2.79,
+              "yaw": -0.403,
+              "slip": 0.004
+            },
+            {
+              "d": 4393.0,
+              "v": 131.2,
+              "br": 7429.0,
+              "gas": 0.38,
+              "steer": -0.055,
+              "ax": -1.02,
+              "ay": -7.93,
+              "yaw": -0.451,
+              "slip": 0.01
+            },
+            {
+              "d": 4415.5,
+              "v": 129.6,
+              "br": 0.0,
+              "gas": 0.41,
+              "steer": -0.054,
+              "ax": -1.76,
+              "ay": -12.34,
+              "yaw": -0.403,
+              "slip": 0.011
+            },
+            {
+              "d": 4443.2,
+              "v": 128.7,
+              "br": 0.0,
+              "gas": 0.43,
+              "steer": -0.051,
+              "ax": -0.92,
+              "ay": -14.26,
+              "yaw": -0.455,
+              "slip": 0.01
+            },
+            {
+              "d": 4459.7,
+              "v": 128.3,
+              "br": 0.0,
+              "gas": 0.61,
+              "steer": -0.047,
+              "ax": 0.45,
+              "ay": -14.31,
+              "yaw": -0.427,
+              "slip": 0.009
+            },
+            {
+              "d": 4473.0,
+              "v": 131.5,
+              "br": 0.0,
+              "gas": 0.82,
+              "steer": -0.038,
+              "ax": 3.18,
+              "ay": -13.71,
+              "yaw": -0.326,
+              "slip": 0.01
+            },
+            {
+              "d": 4486.2,
+              "v": 140.8,
+              "br": 0.0,
+              "gas": 0.99,
+              "steer": -0.014,
+              "ax": 4.96,
+              "ay": -11.61,
+              "yaw": -0.096,
+              "slip": 0.006
+            },
+            {
+              "d": 4501.3,
+              "v": 149.7,
+              "br": 0.0,
+              "gas": 0.99,
+              "steer": -0.004,
+              "ax": 5.57,
+              "ay": -8.2,
+              "yaw": -0.049,
+              "slip": 0.002
+            },
+            {
+              "d": 4519.2,
+              "v": 157.5,
+              "br": 0.0,
+              "gas": 0.99,
+              "steer": 0.0,
+              "ax": 2.29,
+              "ay": -4.97,
+              "yaw": -0.012,
+              "slip": -0.002
+            },
+            {
+              "d": 4534.3,
+              "v": 164.4,
+              "br": 0.0,
+              "gas": 0.99,
+              "steer": -0.001,
+              "ax": 3.96,
+              "ay": -2.72,
+              "yaw": 0.002,
+              "slip": -0.004
+            }
+          ]
+        },
+        {
+          "segment_id": "Turn_5",
+          "direction": "right",
+          "archetype": "MidSpeed_Right_Hairpin",
+          "entry_speed_kmh": 133.2,
+          "time_in_corner_s": 1.741,
+          "braking": {
+            "brake_point_m": 0.0,
+            "peak_pressure_pa": 0.0,
+            "deceleration_g": 0.0,
+            "duration_s": 0.0
+          },
+          "trail_brake": {
+            "active": false,
+            "quality_r2": 0.0,
+            "duration_s": 0.0
+          },
+          "apex": {
+            "speed_kmh": 133.2,
+            "lateral_g": 1.38,
+            "lateral_offset_m": -0.35,
+            "sideslip_rad": 0.0112,
+            "distance_m": 4476.0
+          },
+          "exit": {
+            "throttle_point_m": 4476.0,
+            "exit_speed_kmh": 165.4,
+            "coast_time_s": 0.0,
+            "rear_wheelspin": false
+          },
+          "trace": [
+            {
+              "d": 4455.5,
+              "v": 128.4,
+              "br": 0.0,
+              "gas": 0.56,
+              "steer": -0.047,
+              "ax": -0.76,
+              "ay": -14.31,
+              "yaw": -0.335,
+              "slip": 0.008
+            },
+            {
+              "d": 4471.2,
+              "v": 130.9,
+              "br": 0.0,
+              "gas": 0.79,
+              "steer": -0.039,
+              "ax": 2.63,
+              "ay": -13.79,
+              "yaw": -0.352,
+              "slip": 0.008
+            },
+            {
+              "d": 4485.3,
+              "v": 140.3,
+              "br": 0.0,
+              "gas": 0.99,
+              "steer": -0.015,
+              "ax": 5.11,
+              "ay": -11.77,
+              "yaw": -0.132,
+              "slip": 0.006
+            },
+            {
+              "d": 4503.1,
+              "v": 150.7,
+              "br": 0.0,
+              "gas": 0.99,
+              "steer": -0.003,
+              "ax": 5.92,
+              "ay": -7.86,
+              "yaw": -0.045,
+              "slip": 0.001
+            },
+            {
+              "d": 4521.3,
+              "v": 158.4,
+              "br": 0.0,
+              "gas": 0.99,
+              "steer": 0.0,
+              "ax": 3.55,
+              "ay": -4.49,
+              "yaw": 0.006,
+              "slip": -0.003
+            },
+            {
+              "d": 4539.8,
+              "v": 165.8,
+              "br": 0.0,
+              "gas": 0.99,
+              "steer": -0.001,
+              "ax": 4.49,
+              "ay": -2.35,
+              "yaw": -0.004,
+              "slip": -0.004
+            },
+            {
+              "d": 4562.9,
+              "v": 174.4,
+              "br": 0.0,
+              "gas": 0.99,
+              "steer": -0.001,
+              "ax": 4.27,
+              "ay": -1.5,
+              "yaw": -0.017,
+              "slip": 0.001
+            },
+            {
+              "d": 4586.9,
+              "v": 182.6,
+              "br": 0.0,
+              "gas": 0.99,
+              "steer": 0.002,
+              "ax": 3.5,
+              "ay": -1.14,
+              "yaw": 0.011,
+              "slip": -0.002
+            },
+            {
+              "d": 4612.0,
+              "v": 189.1,
+              "br": 0.0,
+              "gas": 0.99,
+              "steer": 0.001,
+              "ax": 4.2,
+              "ay": -0.21,
+              "yaw": 0.004,
+              "slip": -0.005
+            },
+            {
+              "d": 4638.0,
+              "v": 195.5,
+              "br": 0.0,
+              "gas": 0.99,
+              "steer": 0.0,
+              "ax": 3.3,
+              "ay": -0.17,
+              "yaw": -0.014,
+              "slip": -0.001
+            }
+          ]
+        },
+        {
+          "segment_id": "Turn_6",
+          "direction": "left",
+          "archetype": "MidSpeed_Left_90Deg",
+          "entry_speed_kmh": 207.5,
+          "time_in_corner_s": 1.3,
+          "braking": {
+            "brake_point_m": 2251.3,
+            "peak_pressure_pa": 12286286.0,
+            "deceleration_g": 1.59,
+            "duration_s": 1.46
+          },
+          "trail_brake": {
+            "active": true,
+            "quality_r2": 0.99,
+            "duration_s": 1.521
+          },
+          "apex": {
+            "speed_kmh": 145.9,
+            "lateral_g": 0.6,
+            "lateral_offset_m": 0.02,
+            "sideslip_rad": 0.0112,
+            "distance_m": 2306.9
+          },
+          "exit": {
+            "throttle_point_m": 2326.8,
+            "exit_speed_kmh": 120.1,
+            "coast_time_s": 0.0,
+            "rear_wheelspin": false
+          },
+          "trace": [
+            {
+              "d": 2251.3,
+              "v": 212.3,
+              "br": 4543714.0,
+              "gas": 0.07,
+              "steer": 0.001,
+              "ax": -7.96,
+              "ay": -1.34,
+              "yaw": 0.0,
+              "slip": -0.001
+            },
+            {
+              "d": 2282.3,
+              "v": 189.4,
+              "br": 10466571.0,
+              "gas": 0.07,
+              "steer": 0.008,
+              "ax": -12.42,
+              "ay": 0.78,
+              "yaw": 0.106,
+              "slip": -0.002
+            },
+            {
+              "d": 2301.4,
+              "v": 158.1,
+              "br": 12052571.0,
+              "gas": 0.07,
+              "steer": 0.014,
+              "ax": -15.0,
+              "ay": 4.56,
+              "yaw": 0.206,
+              "slip": -0.01
+            },
+            {
+              "d": 2318.7,
+              "v": 128.5,
+              "br": 7951143.0,
+              "gas": 0.07,
+              "steer": 0.028,
+              "ax": -12.0,
+              "ay": 7.74,
+              "yaw": 0.338,
+              "slip": -0.013
+            },
+            {
+              "d": 2335.8,
+              "v": 108.8,
+              "br": 3557473.0,
+              "gas": 0.07,
+              "steer": 0.051,
+              "ax": -6.27,
+              "ay": 10.56,
+              "yaw": 0.404,
+              "slip": -0.013
+            },
+            {
+              "d": 2353.4,
+              "v": 99.0,
+              "br": -857.0,
+              "gas": 0.51,
+              "steer": 0.067,
+              "ax": -2.46,
+              "ay": 12.85,
+              "yaw": 0.514,
+              "slip": -0.013
+            },
+            {
+              "d": 2369.1,
+              "v": 94.9,
+              "br": 0.0,
+              "gas": 0.32,
+              "steer": 0.07,
+              "ax": -1.14,
+              "ay": 13.46,
+              "yaw": 0.529,
+              "slip": -0.004
+            },
+            {
+              "d": 2385.0,
+              "v": 96.0,
+              "br": 0.0,
+              "gas": 0.64,
+              "steer": 0.059,
+              "ax": 1.44,
+              "ay": 12.32,
+              "yaw": 0.402,
+              "slip": -0.004
+            },
+            {
+              "d": 2396.6,
+              "v": 103.7,
+              "br": 0.0,
+              "gas": 0.95,
+              "steer": 0.028,
+              "ax": 4.9,
+              "ay": 9.94,
+              "yaw": 0.228,
+              "slip": -0.003
+            },
+            {
+              "d": 2407.1,
+              "v": 120.1,
+              "br": 0.0,
+              "gas": 0.99,
+              "steer": 0.01,
+              "ax": 7.68,
+              "ay": 6.84,
+              "yaw": 0.112,
+              "slip": -0.006
+            }
+          ]
+        },
+        {
+          "segment_id": "Turn_7",
+          "direction": "left",
+          "archetype": "LowSpeed_Left_90Deg",
+          "entry_speed_kmh": 99.4,
+          "time_in_corner_s": 3.44,
+          "braking": {
+            "brake_point_m": 2552.4,
+            "peak_pressure_pa": 0.0,
+            "deceleration_g": 0.0,
+            "duration_s": 0.0
+          },
+          "trail_brake": {
+            "active": false,
+            "quality_r2": 0.0,
+            "duration_s": 0.0
+          },
+          "apex": {
+            "speed_kmh": 99.4,
+            "lateral_g": 1.14,
+            "lateral_offset_m": 0.23,
+            "sideslip_rad": 0.0037,
+            "distance_m": 2392.4
+          },
+          "exit": {
+            "throttle_point_m": 2392.4,
+            "exit_speed_kmh": 170.7,
+            "coast_time_s": 0.0,
+            "rear_wheelspin": false
+          },
+          "trace": [
+            {
+              "d": 2382.6,
+              "v": 95.4,
+              "br": 0.0,
+              "gas": 0.59,
+              "steer": 0.061,
+              "ax": 0.95,
+              "ay": 12.53,
+              "yaw": 0.389,
+              "slip": -0.003
+            },
+            {
+              "d": 2395.6,
+              "v": 102.2,
+              "br": 0.0,
+              "gas": 0.91,
+              "steer": 0.031,
+              "ax": 4.77,
+              "ay": 10.37,
+              "yaw": 0.234,
+              "slip": -0.004
+            },
+            {
+              "d": 2406.3,
+              "v": 119.0,
+              "br": 0.0,
+              "gas": 0.99,
+              "steer": 0.011,
+              "ax": 8.2,
+              "ay": 7.01,
+              "yaw": 0.131,
+              "slip": -0.006
+            },
+            {
+              "d": 2422.9,
+              "v": 136.5,
+              "br": 0.0,
+              "gas": 0.99,
+              "steer": 0.0,
+              "ax": 6.53,
+              "ay": 3.86,
+              "yaw": 0.015,
+              "slip": -0.004
+            },
+            {
+              "d": 2445.1,
+              "v": 150.5,
+              "br": 0.0,
+              "gas": 0.99,
+              "steer": -0.006,
+              "ax": 6.46,
+              "ay": 0.58,
+              "yaw": -0.082,
+              "slip": -0.001
+            },
+            {
+              "d": 2471.7,
+              "v": 161.3,
+              "br": 0.0,
+              "gas": 0.99,
+              "steer": 0.006,
+              "ax": 3.29,
+              "ay": -0.9,
+              "yaw": 0.025,
+              "slip": -0.002
+            },
+            {
+              "d": 2497.1,
+              "v": 171.1,
+              "br": 0.0,
+              "gas": 0.99,
+              "steer": 0.021,
+              "ax": 4.52,
+              "ay": 4.04,
+              "yaw": 0.25,
+              "slip": -0.008
+            },
+            {
+              "d": 2526.2,
+              "v": 179.2,
+              "br": 0.0,
+              "gas": 0.94,
+              "steer": 0.027,
+              "ax": 3.28,
+              "ay": 9.91,
+              "yaw": 0.357,
+              "slip": -0.015
+            },
+            {
+              "d": 2559.4,
+              "v": 182.6,
+              "br": 304000.0,
+              "gas": 0.49,
+              "steer": 0.033,
+              "ax": -0.43,
+              "ay": 14.67,
+              "yaw": 0.412,
+              "slip": -0.021
+            },
+            {
+              "d": 2596.1,
+              "v": 177.1,
+              "br": -857.0,
+              "gas": 0.54,
+              "steer": 0.039,
+              "ax": -1.45,
+              "ay": 17.22,
+              "yaw": 0.393,
+              "slip": -0.025
+            }
+          ]
+        }
+      ],
+      "straights": [
+        {
+          "segment_id": "Straight_1",
+          "top_speed_kmh": 184.3,
+          "entry_speed_kmh": 175.4,
+          "exit_speed_kmh": 183.3,
+          "max_accel_g": 0.39,
+          "full_throttle_pct": 0.0,
+          "gear_shifts": 0,
+          "time_s": 1.581
+        },
+        {
+          "segment_id": "Straight_2",
+          "top_speed_kmh": 225.8,
+          "entry_speed_kmh": 181.7,
+          "exit_speed_kmh": 211.3,
+          "max_accel_g": 0.34,
+          "full_throttle_pct": 86.1,
+          "gear_shifts": 1,
+          "time_s": 6.76
+        },
+        {
+          "segment_id": "Straight_3",
+          "top_speed_kmh": 245.7,
+          "entry_speed_kmh": 158.0,
+          "exit_speed_kmh": 201.5,
+          "max_accel_g": 0.59,
+          "full_throttle_pct": 90.5,
+          "gear_shifts": 2,
+          "time_s": 15.321
+        },
+        {
+          "segment_id": "Straight_4",
+          "top_speed_kmh": 220.5,
+          "entry_speed_kmh": 162.5,
+          "exit_speed_kmh": 208.1,
+          "max_accel_g": 0.55,
+          "full_throttle_pct": 83.8,
+          "gear_shifts": 1,
+          "time_s": 5.78
+        },
+        {
+          "segment_id": "Straight_5",
+          "top_speed_kmh": 144.9,
+          "entry_speed_kmh": 144.9,
+          "exit_speed_kmh": 99.2,
+          "max_accel_g": 0.32,
+          "full_throttle_pct": 0.0,
+          "gear_shifts": 0,
+          "time_s": 3.18
+        },
+        {
+          "segment_id": "Straight_6",
+          "top_speed_kmh": 182.7,
+          "entry_speed_kmh": 171.1,
+          "exit_speed_kmh": 181.8,
+          "max_accel_g": 0.46,
+          "full_throttle_pct": 43.7,
+          "gear_shifts": 0,
+          "time_s": 1.4
+        }
+      ],
+      "dynamics": {
+        "gg_diagram": {
+          "max_lateral_g": 1.88,
+          "max_braking_g": 1.99,
+          "max_accel_g": 0.97,
+          "friction_utilization_pct": 14.2
+        },
+        "balance": "neutral",
+        "events": {
+          "oversteer": 0,
+          "understeer": 0,
+          "lockup": 0,
+          "wheelspin": 3
+        }
+      },
+      "tires": {
+        "wheels": {
+          "fl": {
+            "avg_temp_c": 40.8,
+            "gradient_c": 4.6,
+            "pressure_bar": 2.22
+          },
+          "fr": {
+            "avg_temp_c": 39.7,
+            "gradient_c": -3.6,
+            "pressure_bar": 2.34
+          },
+          "rl": {
+            "avg_temp_c": 47.2,
+            "gradient_c": -9.8,
+            "pressure_bar": 2.32
+          },
+          "rr": {
+            "avg_temp_c": 42.7,
+            "gradient_c": -0.6,
+            "pressure_bar": 2.34
+          }
+        },
+        "front_rear_delta_c": -4.7,
+        "left_right_delta_c": 2.8,
+        "warnings": [
+          "FL: cold (40.8\u00b0C), tire not up to operating temp",
+          "FR: cold (39.7\u00b0C), tire not up to operating temp",
+          "RL: outer 9.8\u00b0C hotter than inner - possible under-camber",
+          "RL: cold (47.2\u00b0C), tire not up to operating temp",
+          "RR: cold (42.7\u00b0C), tire not up to operating temp"
+        ]
+      },
+      "brakes": {
+        "front_bias_pct": 54.5,
+        "lr_imbalance_pct": 0.1,
+        "zone_count": 11,
+        "modulation_score": 0.2,
+        "brake_time_pct": 21.5
+      }
+    }
+  },
+  "coaching_highlights": [
+    {
+      "type": "wheelspin",
+      "priority": "medium",
+      "lap": 0,
+      "message": "Lap 0: 3 rear wheelspin events on corner exit."
+    },
+    {
+      "type": "tire_temp",
+      "priority": "medium",
+      "lap": 0,
+      "message": "Lap 0: FL: cold (40.8\u00b0C), tire not up to operating temp"
+    },
+    {
+      "type": "tire_temp",
+      "priority": "medium",
+      "lap": 0,
+      "message": "Lap 0: FR: cold (39.7\u00b0C), tire not up to operating temp"
+    },
+    {
+      "type": "tire_temp",
+      "priority": "medium",
+      "lap": 0,
+      "message": "Lap 0: RL: outer 9.8\u00b0C hotter than inner - possible under-camber"
+    },
+    {
+      "type": "tire_temp",
+      "priority": "medium",
+      "lap": 0,
+      "message": "Lap 0: RL: cold (47.2\u00b0C), tire not up to operating temp"
+    },
+    {
+      "type": "tire_temp",
+      "priority": "medium",
+      "lap": 0,
+      "message": "Lap 0: RR: cold (42.7\u00b0C), tire not up to operating temp"
+    }
+  ],
+  "deterministic_coaching": {
+    "total_verdicts": 3,
+    "total_estimated_gain_s": 2.01,
+    "top_3_actions": [
+      "Trust the car's grip \u2014 it has more than you're using. Carry more entry speed into corners, hold throttle longer on exit, and brake later/harder to spend more time near the grip limit.",
+      "[Turn_6] Begin progressive throttle application at or slightly before the apex. You do not need to wait until the car is fully straight. Target: throttle > 10% within 5-10m of the apex.",
+      "[Turn_2] Apply throttle more progressively on exit. Wait until the steering is unwinding before increasing throttle past 50%. Think: 'unwind the wheel, then add throttle' \u2014 not both at once."
+    ],
+    "verdicts": [
+      {
+        "category": "dynamics",
+        "severity": "medium",
+        "segment": "",
+        "lap": 0,
+        "finding": "Only 14.2% of cornering time near grip limit (peak: 1.99g, target: >25% of corners at \u226580% peak g).",
+        "reasoning": "During corners and braking, the car reaches 1.99g peak, but spends only 14.2% of that time above 80% of its own peak. This means most corners are being driven well below the car's capability \u2014 either entry speed is too low, apex is taken too cautiously, or exits are lifted early.",
+        "action": "Trust the car's grip \u2014 it has more than you're using. Carry more entry speed into corners, hold throttle longer on exit, and brake later/harder to spend more time near the grip limit.",
+        "time_impact_s": 1.485,
+        "measured": 14.186,
+        "target": 25.0,
+        "unit": "percent",
+        "vs_reference": false
+      },
+      {
+        "category": "exit",
+        "severity": "medium",
+        "segment": "Turn_6",
+        "lap": 0,
+        "finding": "Throttle applied 20m after the apex (apex at 2307m, throttle at 2327m).",
+        "reasoning": "The car covers 20m between the apex and first throttle application without accelerating. This costs approximately 3.5 km/h of exit speed that compounds down the following straight.",
+        "action": "Begin progressive throttle application at or slightly before the apex. You do not need to wait until the car is fully straight. Target: throttle > 10% within 5-10m of the apex.",
+        "time_impact_s": 0.421,
+        "measured": 19.833,
+        "target": 10.0,
+        "unit": "meters_past_apex",
+        "vs_reference": false
+      },
+      {
+        "category": "exit",
+        "severity": "medium",
+        "segment": "Turn_2",
+        "lap": 0,
+        "finding": "Rear wheelspin detected on corner exit.",
+        "reasoning": "The rear tires exceeded their traction limit during acceleration. Spinning tires generate less forward force than rolling tires, so the car actually accelerates slower despite more throttle input. It also risks snap oversteer.",
+        "action": "Apply throttle more progressively on exit. Wait until the steering is unwinding before increasing throttle past 50%. Think: 'unwind the wheel, then add throttle' \u2014 not both at once.",
+        "time_impact_s": 0.1,
+        "measured": 1.0,
+        "target": 0.0,
+        "unit": "wheelspin_present",
+        "vs_reference": false
+      }
+    ]
+  }
+}
