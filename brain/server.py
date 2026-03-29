@@ -20,6 +20,7 @@ from pydantic import BaseModel
 
 from brain.main import run_pipeline
 from brain.chat_service import get_chat_service
+from brain.video import extract_frame_at_timestamp, get_available_cameras
 
 logging.basicConfig(
     level=logging.INFO,
@@ -182,3 +183,70 @@ async def chat_status():
         "available": chat_service.is_available(),
         "message": "Ready" if chat_service.is_available() else "GEMINI_API_KEY not set"
     }
+
+
+# ---------------------------------------------------------------------------
+# Video Frame API
+# ---------------------------------------------------------------------------
+
+# Store uploaded MCAP path for frame extraction
+_uploaded_mcap_path: Path | None = None
+
+
+@app.get("/api/frame")
+async def get_frame(timestamp: float, camera: str | None = None):
+    """
+    Extract a single frame from the uploaded MCAP at the given timestamp.
+
+    Args:
+        timestamp: Time in seconds from session start
+        camera: Camera topic (optional, auto-detects if not provided)
+
+    Returns:
+        JSON with frame data URL (base64 encoded image)
+    """
+    global _uploaded_mcap_path
+
+    # Check for uploaded MCAP or use default demo file
+    mcap_path = _uploaded_mcap_path
+    if mcap_path is None or not mcap_path.exists():
+        # Try default hackathon file for demo
+        default_mcap = Path(__file__).parent.parent / "hackathon" / "hackathon_fast_laps.mcap"
+        if default_mcap.exists():
+            mcap_path = default_mcap
+        else:
+            raise HTTPException(404, "No MCAP file available. Upload one first.")
+
+    frame = extract_frame_at_timestamp(
+        mcap_path=mcap_path,
+        target_time_s=timestamp,
+        camera_topic=camera,
+    )
+
+    if frame is None:
+        raise HTTPException(404, f"No frame found near timestamp {timestamp}s")
+
+    return JSONResponse({
+        "timestamp_s": timestamp,
+        "actual_timestamp_ns": frame.timestamp_ns,
+        "camera": frame.camera,
+        "format": frame.format,
+        "data_url": frame.to_data_url(),
+    })
+
+
+@app.get("/api/cameras")
+async def list_cameras():
+    """List available camera topics in the current MCAP file."""
+    global _uploaded_mcap_path
+
+    mcap_path = _uploaded_mcap_path
+    if mcap_path is None or not mcap_path.exists():
+        default_mcap = Path(__file__).parent.parent / "hackathon" / "hackathon_fast_laps.mcap"
+        if default_mcap.exists():
+            mcap_path = default_mcap
+        else:
+            raise HTTPException(404, "No MCAP file available")
+
+    cameras = get_available_cameras(mcap_path)
+    return {"cameras": cameras}

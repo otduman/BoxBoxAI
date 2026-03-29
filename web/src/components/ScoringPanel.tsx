@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { ChevronDown, ChevronUp, Target, TrendingUp, AlertTriangle } from "lucide-react";
 import { useState } from "react";
+import { Tooltip } from "./Tooltip";
 
 interface SegmentScore {
   segment_id: string;
@@ -45,22 +46,22 @@ const qualityBgColors: Record<string, string> = {
   poor: "bg-racing-red/20",
 };
 
-// Human-readable labels for component scores
-const componentLabels: Record<string, string> = {
-  entry_speed: "Entry Speed",
-  apex_speed: "Apex Speed",
-  exit_speed: "Exit Speed",
-  brake_point: "Brake Point",
-  braking_intensity: "Braking G",
-  brake_release: "Brake Release",
-  trail_brake: "Trail Brake",
-  throttle_point: "Throttle Point",
-  traction_control: "Traction",
-  line: "Racing Line",
-  lateral_g_utilization: "Lateral G",
-  top_speed: "Top Speed",
-  throttle_pct: "Throttle %",
-  acceleration: "Acceleration",
+// Human-readable labels for component scores (maps to glossary terms)
+const componentLabels: Record<string, { label: string; term: string }> = {
+  entry_speed: { label: "Entry Speed", term: "entry speed" },
+  apex_speed: { label: "Apex Speed", term: "apex speed" },
+  exit_speed: { label: "Exit Speed", term: "exit speed" },
+  brake_point: { label: "Brake Point", term: "brake point" },
+  braking_intensity: { label: "Braking G", term: "braking intensity" },
+  brake_release: { label: "Brake Release", term: "brake release" },
+  trail_brake: { label: "Trail Brake", term: "trail-braking" },
+  throttle_point: { label: "Throttle Point", term: "throttle point" },
+  traction_control: { label: "Traction", term: "traction control" },
+  line: { label: "Racing Line", term: "racing line" },
+  lateral_g_utilization: { label: "Lateral G", term: "lateral G" },
+  top_speed: { label: "Top Speed", term: "top speed" },
+  throttle_pct: { label: "Throttle %", term: "throttle" },
+  acceleration: { label: "Acceleration", term: "acceleration" },
 };
 
 const ScoringPanel = ({ scoring, selectedLap = "all" }: ScoringPanelProps) => {
@@ -146,7 +147,9 @@ const ScoringPanel = ({ scoring, selectedLap = "all" }: ScoringPanelProps) => {
             </div>
             <p className="text-xs font-medium truncate">{weakestCorner.segment_id}</p>
             <p className="text-[10px] text-muted-foreground">
-              Issue: {componentLabels[weakestCorner.main_issue] || weakestCorner.main_issue}
+              Issue: <Tooltip term={componentLabels[weakestCorner.main_issue]?.term || weakestCorner.main_issue}>
+                {componentLabels[weakestCorner.main_issue]?.label || weakestCorner.main_issue}
+              </Tooltip>
             </p>
           </div>
         )}
@@ -160,7 +163,9 @@ const ScoringPanel = ({ scoring, selectedLap = "all" }: ScoringPanelProps) => {
             </div>
             <p className="text-xs font-medium truncate">{weakestStraight.segment_id}</p>
             <p className="text-[10px] text-muted-foreground">
-              Issue: {componentLabels[weakestStraight.main_issue] || weakestStraight.main_issue}
+              Issue: <Tooltip term={componentLabels[weakestStraight.main_issue]?.term || weakestStraight.main_issue}>
+                {componentLabels[weakestStraight.main_issue]?.label || weakestStraight.main_issue}
+              </Tooltip>
             </p>
           </div>
         )}
@@ -211,7 +216,9 @@ const ScoringPanel = ({ scoring, selectedLap = "all" }: ScoringPanelProps) => {
                   {Object.entries(seg.components).map(([key, value]) => (
                     <div key={key} className="flex items-center gap-2">
                       <span className="text-[10px] text-muted-foreground w-24 truncate">
-                        {componentLabels[key] || key}
+                        <Tooltip term={componentLabels[key]?.term || key} showIcon={false}>
+                          {componentLabels[key]?.label || key}
+                        </Tooltip>
                       </span>
                       <div className="flex-1 h-1 bg-foreground/10 rounded-full overflow-hidden">
                         <motion.div

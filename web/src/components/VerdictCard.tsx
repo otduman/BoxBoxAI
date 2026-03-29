@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import type { VizMarker } from "@/data/types";
+import { AutoTooltip } from "./Tooltip";
 
 /* Unified severity colors — matches Track3D.tsx markers exactly */
 const SEV_COLORS: Record<string, { text: string; icon: string; border: string; bg: string }> = {
@@ -112,7 +113,7 @@ const VerdictCard = ({ marker, index, isActive, onClick, showLapBadge }: Verdict
 
         {/* Finding */}
         <p className="text-xs text-muted-foreground leading-relaxed pl-5">
-          {marker.finding}
+          <AutoTooltip text={marker.finding} />
         </p>
 
         {/* Severity + expand toggle */}
@@ -150,7 +151,7 @@ const VerdictCard = ({ marker, index, isActive, onClick, showLapBadge }: Verdict
               Why this matters
             </p>
             <p className="text-xs text-foreground/80 leading-relaxed">
-              {marker.reasoning}
+              <AutoTooltip text={marker.reasoning} />
             </p>
           </div>
           {/* Telemetry log */}
@@ -192,7 +193,7 @@ const VerdictCard = ({ marker, index, isActive, onClick, showLapBadge }: Verdict
               </p>
             </div>
             <p className="text-xs text-foreground/90 leading-relaxed">
-              {marker.action}
+              <AutoTooltip text={marker.action} />
             </p>
           </div>
         </div>
